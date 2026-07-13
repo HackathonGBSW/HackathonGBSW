@@ -1,3 +1,19 @@
+@font-face {
+  font-family: "Maplestory";
+  src: url("/fonts/Maplestory-Light.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maplestory";
+  src: url("/fonts/Maplestory-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --color-primary: #0052ff;
   --color-primary-active: #003ecc;
@@ -45,8 +61,8 @@
 
   --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.04);
 
-  --font-sans: Inter, -apple-system, system-ui, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
+  --font-sans: "Maplestory", Inter, -apple-system, system-ui, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "JetBrains Mono", "Geist Mono", ui-monospace, monospace;
 
   --header-h: 64px;

@@ -1,20 +1,29 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Avatar, Button, Input, RankPill } from "../components/ui";
-import { DEMO, PORTFOLIO_FIELDS, SCORE_ITEMS, api } from "../lib/api";
+import { DEMO, FIELDS, PORTFOLIO_FIELDS, SCORE_ITEMS, api } from "../lib/api";
+import profileAvatar from "../assets/profile-card-avatar.jpg";
+import profileBanner from "../assets/profile-card-banner.jpg";
 import "./flow.css";
 
 /** 메인(마이페이지): 넓은 프로필 카드 + 스크롤 시 랭크받기/대결하기 반반 */
 export function MainPage() {
   const u = DEMO;
-  const rows = [
+  const rankScore = Math.min(100, Math.max(0, u.player_rank_score));
+  const battleRate = `${(u.battle_win_rate * 100).toFixed(1)}%`;
+  const playerTier = "브론즈 II";
+  const nextTier = "브론즈 III";
+  const categoryChips = [
+    u.main_field ?? FIELDS[0],
+    ...FIELDS.filter((field) => field !== u.main_field),
+  ].slice(0, 3);
+  const profileStats = [
     { label: "사용자 이름", value: u.username },
-    { label: "주분야", value: u.main_field },
-    { label: "깃헙 URL", value: u.github_url, href: u.github_url },
-    { label: "플레이어 랭크", value: `${u.player_rank} · ${u.player_rank_score}점` },
+    { label: "주분야", value: u.main_field ?? "미선택" },
+    { label: "플레이어 랭크", value: playerTier },
     {
       label: "대결 승률",
-      value: `${(u.battle_win_rate * 100).toFixed(1)}% (${u.wins}승 ${u.losses}패)`,
+      value: `${battleRate} (${u.wins}승 ${u.losses}패)`,
     },
     { label: "포폴 최고 랭크", value: u.portfolio_best_rank },
     { label: "포폴 평균 랭크", value: u.portfolio_avg_rank },
@@ -22,50 +31,87 @@ export function MainPage() {
 
   return (
     <div className="flow-main">
-      <section className="flow-hero">
+      <section className="flow-hero" aria-label="메인 프로필">
         <article className="profile-card">
           <div className="profile-card__banner">
-            <img src="/profile-banner.png" alt="" />
-          </div>
-
-          <div className="profile-card__head">
-            <div className="profile-card__avatar" aria-hidden>
-              <Avatar name={u.username} size="lg" />
-            </div>
-            <div className="profile-card__head-text">
-              <h1 className="profile-card__name">{u.username}</h1>
-              <p className="t-cap">{u.main_field}</p>
+            <img src={profileBanner} alt="" />
+            <div className="profile-card__rank">
+              <span>PLAYER RANK</span>
+              <strong>{playerTier}</strong>
             </div>
           </div>
 
-          <dl className="profile-card__list">
-            {rows.map((row) => (
-              <div key={row.label} className="profile-card__row">
-                <dt>{row.label}</dt>
-                <dd>
-                  {row.href ? (
-                    <a href={row.href} target="_blank" rel="noreferrer">
-                      {row.value}
-                    </a>
-                  ) : (
-                    row.value
-                  )}
-                </dd>
+          <div className="profile-card__body">
+            <div className="profile-card__head">
+              <div className="profile-card__avatar" aria-hidden>
+                <img src={profileAvatar} alt="" />
               </div>
-            ))}
-          </dl>
+
+              <div className="profile-card__title">
+                <p className="profile-card__eyebrow">MAIN PROFILE</p>
+                <h1 className="profile-card__name">{u.username}</h1>
+              </div>
+            </div>
+
+            <p className="profile-card__intro">{u.bio}</p>
+
+            <div className="profile-card__chips" aria-label="기술 및 직무 카테고리">
+              {categoryChips.map((field, index) => (
+                <span
+                  key={field}
+                  className={`profile-card__chip ${
+                    field === u.main_field ? "is-primary" : ""
+                  }`}
+                  data-tone={index % 4}
+                >
+                  # {field}
+                </span>
+              ))}
+            </div>
+
+            <dl className="profile-card__stats">
+              {profileStats.map((item) => (
+                <div key={item.label} className="profile-card__stat">
+                  <dt>{item.label}</dt>
+                  <dd>{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            <div className="profile-card__meta">
+              <a
+                className="profile-card__github"
+                href={u.github_url ?? undefined}
+                target="_blank"
+                rel="noreferrer"
+              >
+                @ {u.github_url ?? "GitHub URL을 등록해주세요"}
+              </a>
+
+              <div className="profile-card__meter" aria-label="플레이어 랭크 점수">
+                <div>
+                  <span>{nextTier}까지</span>
+                  <strong>{rankScore}/100</strong>
+                </div>
+                <i>
+                  <span style={{ width: `${rankScore}%` }} />
+                </i>
+              </div>
+            </div>
+          </div>
         </article>
-        <p className="flow-hero__hint t-cap">아래로 스크롤</p>
       </section>
 
-      <section className="flow-split" aria-label="주요 행동">
+      <section className="flow-split" aria-label="주요 시스템">
         <Link to="/app/rank" className="flow-split__btn flow-split__btn--rank">
-          <span className="flow-split__label">랭크 받기</span>
-          <span className="flow-split__desc">포트폴리오 분석</span>
+          <span className="flow-split__eyebrow">Rank System</span>
+          <span className="flow-split__label">랭크 시스템</span>
+          <span className="flow-split__desc">분야 선택부터 GitHub 분석, 피드백, 점수 부여까지</span>
         </Link>
         <Link to="/app/battle" className="flow-split__btn flow-split__btn--battle">
-          <span className="flow-split__label">대결하기</span>
-          <span className="flow-split__desc">매칭 · 친구 대결</span>
+          <span className="flow-split__eyebrow">Battle System</span>
+          <span className="flow-split__label">대결 시스템</span>
+          <span className="flow-split__desc">비슷한 랭크 매칭과 친구 대결로 포트폴리오 비교</span>
         </Link>
       </section>
     </div>
