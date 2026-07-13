@@ -201,53 +201,58 @@ export function RankPage() {
 }
 
 /** 분석 중 로딩 */
+async function submitPendingAnalyze(): Promise<string> {
+  const raw = sessionStorage.getItem("pending-analyze");
+  if (!raw) return "1";
+
+  try {
+    const body = JSON.parse(raw) as { field: string; github_url: string };
+    const res = await api.createPortfolio(body);
+    sessionStorage.setItem("last-analyze", JSON.stringify(res));
+    return String(res.portfolio_id);
+  } catch {
+    sessionStorage.setItem(
+      "last-analyze",
+      JSON.stringify({
+        portfolio_id: 1,
+        total_score: 86,
+        rank: "A",
+        player_rank_score_gained: 13,
+        feedback: {
+          good: "CI 테스트와 배포 설정이 명확합니다.",
+          improve: "OpenAPI 명세를 추가하면 문서화 점수를 올릴 수 있습니다.",
+        },
+        scores: {
+          completeness: 26,
+          structure: 8,
+          tech: 12,
+          docs: 3.5,
+          test: 3.5,
+          deploy: 12,
+          github: 17,
+        },
+      }),
+    );
+    return "1";
+  }
+}
+
 export function RankAnalyzingPage() {
   const nav = useNavigate();
-  const startedRef = useRef(false);
+  // Shared across React 19 StrictMode's dev-only double-invoke of this effect,
+  // so the underlying POST (api.createPortfolio) fires only once per visit —
+  // while each invocation still gets its own `cancelled` flag, so the one that
+  // actually stays mounted is the one whose timer/navigation goes through.
+  const requestRef = useRef<Promise<string> | null>(null);
 
   useEffect(() => {
-    // Guards against React 19 StrictMode's dev-only double-invoke of effects,
-    // which would otherwise fire api.createPortfolio() (a POST) twice per visit.
-    if (startedRef.current) return;
-    startedRef.current = true;
-
     let cancelled = false;
 
     async function run() {
-      const raw = sessionStorage.getItem("pending-analyze");
-      let resultId = "1";
-
-      if (raw) {
-        try {
-          const body = JSON.parse(raw) as { field: string; github_url: string };
-          const res = await api.createPortfolio(body);
-          resultId = String(res.portfolio_id);
-          sessionStorage.setItem("last-analyze", JSON.stringify(res));
-        } catch {
-          sessionStorage.setItem(
-            "last-analyze",
-            JSON.stringify({
-              portfolio_id: 1,
-              total_score: 86,
-              rank: "A",
-              player_rank_score_gained: 13,
-              feedback: {
-                good: "CI 테스트와 배포 설정이 명확합니다.",
-                improve: "OpenAPI 명세를 추가하면 문서화 점수를 올릴 수 있습니다.",
-              },
-              scores: {
-                completeness: 26,
-                structure: 8,
-                tech: 12,
-                docs: 3.5,
-                test: 3.5,
-                deploy: 12,
-                github: 17,
-              },
-            }),
-          );
-        }
+      if (!requestRef.current) {
+        requestRef.current = submitPendingAnalyze();
       }
+      const resultId = await requestRef.current;
 
       window.setTimeout(() => {
         if (!cancelled) nav(`/app/rank/result/${resultId}`, { replace: true });
