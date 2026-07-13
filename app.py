@@ -1,7 +1,11 @@
+import os
+
 from flask import Flask, render_template, request, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from flask_cors import CORS
+from werkzeug.security import generate_password_hash, check_password_hash
 from enum import Enum
 
 from llm_analyzer import (
@@ -15,8 +19,16 @@ from llm_analyzer import (
 )
 
 app = Flask(__name__, template_folder="templates")
-app.secret_key = "ab5f48133f18fe10fc82073538e14b56d14f93b72aa7e19d7d2c805cf5a582a0"
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://user:0000@localhost:3306/battle"
+# Fallbacks keep `python app.py` working out of the box for local dev; set
+# SECRET_KEY / DATABASE_URL to override for anything beyond that. The
+# fallback secret is already committed to git history — rotate it before
+# ever running this anywhere but a local machine.
+app.secret_key = os.environ.get(
+    "SECRET_KEY", "ab5f48133f18fe10fc82073538e14b56d14f93b72aa7e19d7d2c805cf5a582a0"
+)
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+    "DATABASE_URL", "mysql+pymysql://user:0000@localhost:3306/battle"
+)
 db = SQLAlchemy()
 db.init_app(app)
 with app.app_context():
@@ -31,7 +43,7 @@ class User(db.Model):
     __tablename__ = "user"
 
     username = db.Column(db.String(30), primary_key=True)
-    password = db.Column(db.String(50), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
     github_username = db.Column(db.String(50), nullable=False)
     main_field = db.Column(db.String(50))
     win = db.Column(db.Integer, nullable=False, default=0)
@@ -318,11 +330,18 @@ def signup():
         else:
             data = request.get_json() or request.json
         if not data == None:
-            user = User(username=data["username"], password=data["password"], github_username=data["github_username"])
+            user = User(
+                username=data["username"],
+                password=generate_password_hash(data["password"]),
+                github_username=data["github_username"],
+            )
             try:
                 db.session.add(user)
                 db.session.commit()
                 return created()
+            except IntegrityError:
+                db.session.rollback()
+                return error_data("이미 존재하는 아이디입니다.", 409)
             except Exception:
                 db.session.rollback()
                 raise
@@ -340,7 +359,7 @@ def signin():
             data = request.get_json() or request.json
         if data is not None:
             user = User.query.get(data.get("username"))
-            if not user or user.password != data.get("password"):
+            if not user or not check_password_hash(user.password, data.get("password")):
                 return "", 404
             session["username"] = user.username
             return ok_data({"username": user.username})
