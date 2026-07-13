@@ -1,5 +1,21 @@
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
+/**
+ * Only http(s) URLs are safe to use as an anchor href. Without this check a
+ * profile's github_url (attacker-controlled, stored server-side) could be set
+ * to a `javascript:` URI and execute script in any visitor's browser when
+ * they click the rendered link.
+ */
+export function toSafeHttpUrl(value: string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function request<T>(
   path: string,
   options: {

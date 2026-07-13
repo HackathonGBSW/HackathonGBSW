@@ -108,10 +108,15 @@ export function SignupPage() {
     setError("");
     try {
       await api.signup(username, password);
+    } catch {
+      setError("가입 실패 — 이미 존재하는 아이디일 수 있습니다.");
+      return;
+    }
+    try {
       await api.signin(username, password);
       nav("/onboarding");
     } catch {
-      setError("가입 실패 — 이미 존재하는 아이디일 수 있습니다.");
+      nav("/login");
     }
   }
 
