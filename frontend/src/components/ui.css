@@ -130,19 +130,3 @@
   color: var(--color-primary);
   font-weight: 600;
 }
-
-.page-hd {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 28px;
-}
-.page-hd__desc {
-  margin-top: 8px;
-}
-.page-hd__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
