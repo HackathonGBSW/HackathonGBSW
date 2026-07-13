@@ -7,3 +7,4 @@ openai
 certifi>=2024.2.2
 pydantic>=2.10
 python-dotenv>=1.0
+gunicorn>=22.0
