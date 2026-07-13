@@ -16,6 +16,7 @@ from llm_analyzer import (
     RANK_SCORE_GAIN,
     rank_for_score,
     rank_tier_diff,
+    repository_owner_matches,
 )
 
 app = Flask(__name__, template_folder="templates")
@@ -406,6 +407,10 @@ def portfolios():
     if data is None or not data.get("repository") or not data.get("field"):
         return bad_request()
 
+    user = db.get_or_404(User, session["username"])
+    if not repository_owner_matches(user.github_username, data["repository"]):
+        return error_data("본인 GitHub 계정 소유의 저장소만 등록할 수 있습니다.", 403)
+
     duplicate = Portfolio.query.filter_by(
         username=session["username"], repository=data["repository"]
     ).first()
@@ -421,7 +426,6 @@ def portfolios():
 
     portfolio = Portfolio(username=session["username"], repository=data["repository"], field=data["field"])
     _apply_analysis_result(portfolio, result)
-    user = db.get_or_404(User, session["username"])
     user.player_rank_score += RANK_SCORE_GAIN[result["rank"]]
     try:
         db.session.add(portfolio)
@@ -460,6 +464,10 @@ def portfolio_detail(portfolio_id):
     repository = data.get("repository") or portfolio.repository
     field = data.get("field") or portfolio.field
 
+    user = db.get_or_404(User, session["username"])
+    if not repository_owner_matches(user.github_username, repository):
+        return error_data("본인 GitHub 계정 소유의 저장소만 등록할 수 있습니다.", 403)
+
     if repository != portfolio.repository:
         duplicate = Portfolio.query.filter(
             Portfolio.username == session["username"],
@@ -479,7 +487,6 @@ def portfolio_detail(portfolio_id):
     portfolio.repository = repository
     portfolio.field = field
     _apply_analysis_result(portfolio, result)
-    user = db.get_or_404(User, session["username"])
     user.player_rank_score += RANK_SCORE_GAIN[result["rank"]]
     db.session.commit()
     return ok_data(_portfolio_to_dict(portfolio))

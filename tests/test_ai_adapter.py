@@ -47,6 +47,35 @@ class AIAdapterTests(unittest.TestCase):
                     "backend",
                 )
 
+    def test_repository_owner_matches_same_owner(self) -> None:
+        self.assertTrue(
+            llm_analyzer.repository_owner_matches(
+                "alice", "https://github.com/alice/project"
+            )
+        )
+
+    def test_repository_owner_matches_is_case_insensitive(self) -> None:
+        self.assertTrue(
+            llm_analyzer.repository_owner_matches(
+                "Alice", "https://github.com/alice/project"
+            )
+        )
+
+    def test_repository_owner_matches_rejects_other_users_repo(self) -> None:
+        self.assertFalse(
+            llm_analyzer.repository_owner_matches(
+                "alice", "https://github.com/bob/project"
+            )
+        )
+
+    def test_repository_owner_matches_passes_through_malformed_url(self) -> None:
+        # A malformed URL should not be reported as an ownership mismatch —
+        # analyze_portfolio()/compare_portfolios() raise the real, more
+        # specific AnalysisError for it instead.
+        self.assertTrue(
+            llm_analyzer.repository_owner_matches("alice", "not-a-github-url")
+        )
+
     def test_comparison_maps_to_existing_battle_contract(self) -> None:
         raw1 = {key: 8 for key in (
             "completeness", "structure", "tech", "docs", "test", "deploy", "github"

@@ -14,6 +14,7 @@ from github_battle_ai import (
     LLMConfigurationError,
     analyze_portfolio_comparison,
     analyze_repo_detailed,
+    parse_github_url,
     rank_from_score,
 )
 
@@ -34,6 +35,19 @@ def rank_for_score(score: float) -> str:
 
 def rank_tier_diff(rank_a: str, rank_b: str) -> int:
     return abs(RANK_ORDER.index(rank_a) - RANK_ORDER.index(rank_b))
+
+
+def repository_owner_matches(github_username: str, repository: str) -> bool:
+    """True if `repository`'s URL owner matches github_username (case-insensitive).
+
+    Malformed URLs return True here so analyze_portfolio()/compare_portfolios()
+    can raise the real, more specific AnalysisError for them instead of this
+    check masking it with an ownership-mismatch message."""
+    try:
+        owner, _ = parse_github_url(repository)
+    except AnalysisError:
+        return True
+    return owner.lower() == (github_username or "").lower()
 
 
 def _feedback_text(feedback: dict) -> str:
