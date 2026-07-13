@@ -112,15 +112,17 @@ export function SignupPage() {
     setLoading(true);
     try {
       await api.signup(username, password, githubUsername.trim());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "가입에 실패했습니다.");
+      setLoading(false);
+      return;
+    }
+    try {
       const me = await api.signin(username, password);
       setAuthUsername(me.username);
       nav("/onboarding");
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message || "가입에 실패했습니다."
-          : "가입 실패 — 이미 존재하는 아이디일 수 있습니다.",
-      );
+    } catch {
+      nav("/login");
     } finally {
       setLoading(false);
     }
