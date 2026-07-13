@@ -101,5 +101,14 @@ jobs:
             cd ~/app
             sudo docker compose ps --format "{{.Name}}: {{.Status}}"
             curl -sf -o /dev/null http://localhost:80/
-            curl -sf -o /dev/null -w "backend via proxy: %{http_code}\n" http://localhost:80/api/my
+
+            # /api/my correctly returns 401 when unauthenticated, so a plain
+            # curl -f would misread the expected response as a failure — only
+            # treat "no response at all" (proxy/backend unreachable) as failing.
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:80/api/my)
+            echo "backend via proxy: $code"
+            if [ "$code" = "000" ]; then
+              echo "backend unreachable through the /api proxy" >&2
+              exit 1
+            fi
           '
