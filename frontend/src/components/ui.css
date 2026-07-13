@@ -100,6 +100,7 @@
   color: var(--color-ink);
   font-weight: 600;
   flex-shrink: 0;
+  object-fit: cover;
 }
 .avatar--sm {
   width: 32px;

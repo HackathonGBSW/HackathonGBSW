@@ -68,6 +68,20 @@ async function request<T>(
 
 export type Rank = "S" | "A" | "B" | "C" | "D" | "E" | "F";
 
+export const RANK_TIER_LABEL: Record<Rank, string> = {
+  S: "Challenger",
+  A: "Diamond",
+  B: "Platinum",
+  C: "Gold",
+  D: "Silver",
+  E: "Bronze",
+  F: "Iron",
+};
+
+export function formatRankTier(rank: Rank | null | undefined) {
+  return rank ? RANK_TIER_LABEL[rank] : "—";
+}
+
 export const RANK_SCORE_GAIN: Record<Rank, number> = {
   S: 18,
   A: 13,

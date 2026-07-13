@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import "./ui.css";
 
 type Variant = "primary" | "secondary" | "dark" | "outline" | "text" | "danger";
@@ -49,7 +49,29 @@ export function Input({
   );
 }
 
-export function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" }) {
+export function Avatar({
+  name,
+  githubUsername,
+  size = "md",
+}: {
+  name: string;
+  githubUsername?: string | null;
+  size?: "sm" | "md" | "lg";
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  if (githubUsername && !imageFailed) {
+    return (
+      <img
+        className={`avatar avatar--${size}`}
+        src={`https://github.com/${encodeURIComponent(githubUsername)}.png`}
+        alt=""
+        aria-hidden
+        onError={() => setImageFailed(true)}
+      />
+    );
+  }
+
   return (
     <span className={`avatar avatar--${size}`} aria-hidden>
       {name.slice(0, 2).toUpperCase()}
