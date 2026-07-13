@@ -65,23 +65,3 @@ export function RankPill({ rank, score }: { rank: string; score?: number }) {
     </span>
   );
 }
-
-export function PageHeader({
-  title,
-  description,
-  actions,
-}: {
-  title: string;
-  description?: string;
-  actions?: ReactNode;
-}) {
-  return (
-    <div className="page-hd">
-      <div>
-        <h1 className="t-h1">{title}</h1>
-        {description ? <p className="t-cap page-hd__desc">{description}</p> : null}
-      </div>
-      {actions ? <div className="page-hd__actions">{actions}</div> : null}
-    </div>
-  );
-}

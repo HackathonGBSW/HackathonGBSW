@@ -1,4 +1,4 @@
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 import { Avatar } from "./ui";
 import "./flow-shell.css";
 
@@ -16,9 +16,4 @@ export function FlowShell() {
       <Outlet />
     </div>
   );
-}
-
-export function useGoMain() {
-  const nav = useNavigate();
-  return () => nav("/app");
 }
