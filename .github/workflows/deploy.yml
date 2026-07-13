@@ -1,0 +1,105 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck + build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run backend tests
+        run: python -m pytest tests/ -q
+
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y sshpass
+
+      - name: Pull latest code on EC2
+        env:
+          SSHPASS: ${{ secrets.EC2_PASSWORD }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" '
+            set -e
+            cd ~/app
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+          '
+
+      - name: Write server .env from secrets
+        env:
+          SSHPASS: ${{ secrets.EC2_PASSWORD }}
+        run: |
+          cat <<EOF | sshpass -e ssh -o StrictHostKeyChecking=accept-new "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" 'cat > ~/app/.env && chmod 600 ~/app/.env'
+          MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER=${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          EOF
+
+      - name: Rebuild and restart containers
+        env:
+          SSHPASS: ${{ secrets.EC2_PASSWORD }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" '
+            set -e
+            cd ~/app
+            sudo docker compose up -d --build
+          '
+
+      - name: Clean up unused images
+        env:
+          SSHPASS: ${{ secrets.EC2_PASSWORD }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" '
+            sudo docker image prune -f
+          '
+
+      - name: Verify deployment
+        env:
+          SSHPASS: ${{ secrets.EC2_PASSWORD }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=accept-new "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" '
+            set -e
+            cd ~/app
+            sudo docker compose ps --format "{{.Name}}: {{.Status}}"
+            curl -sf -o /dev/null http://localhost:80/
+            curl -sf -o /dev/null -w "backend via proxy: %{http_code}\n" http://localhost:80/api/my
+          '
