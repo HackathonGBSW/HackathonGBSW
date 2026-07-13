@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Avatar, Button, Input, RankPill } from "../components/ui";
-import { DEMO, FIELDS, PORTFOLIO_FIELDS, SCORE_ITEMS, api } from "../lib/api";
+import { DEMO, FIELDS, PORTFOLIO_FIELDS, SCORE_ITEMS, api, toSafeHttpUrl } from "../lib/api";
 import profileAvatar from "../assets/profile-card-avatar.jpg";
 import profileBanner from "../assets/profile-card-banner.jpg";
 import "./flow.css";
@@ -81,7 +81,7 @@ export function MainPage() {
             <div className="profile-card__meta">
               <a
                 className="profile-card__github"
-                href={u.github_url ?? undefined}
+                href={toSafeHttpUrl(u.github_url)}
                 target="_blank"
                 rel="noreferrer"
               >
