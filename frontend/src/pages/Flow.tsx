@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { BattleGaugeReveal } from "../components/BattleGaugeReveal";
+import { ScoreRadar } from "../components/ScoreRadar";
 import { Avatar, Button, Input, RankPill } from "../components/ui";
 import {
-  BATTLE_SCORE_KEYS,
   DEMO,
   FIELDS,
   PORTFOLIO_FIELDS,
@@ -14,6 +15,7 @@ import {
   toSafeHttpUrl,
   type Battle,
   type Portfolio,
+  type PortfolioScores,
   type Profile,
 } from "../lib/api";
 import profileAvatar from "../assets/profile-card-avatar.jpg";
@@ -340,8 +342,18 @@ export function RankResultPage() {
   const good = cached?.feedback?.good ?? "—";
   const improve = cached?.feedback?.improve ?? "—";
 
+  const scores: PortfolioScores = {
+    completeness: cached?.scores?.completeness ?? 0,
+    structure: cached?.scores?.structure ?? 0,
+    tech: cached?.scores?.tech ?? 0,
+    docs: cached?.scores?.docs ?? 0,
+    test: cached?.scores?.test ?? 0,
+    deploy: cached?.scores?.deploy ?? 0,
+    github: cached?.scores?.github ?? 0,
+  };
+
   const scoreRows = SCORE_ITEMS.map((item) => {
-    const val = cached?.scores?.[item.key] ?? 0;
+    const val = scores[item.key] ?? 0;
     return { ...item, value: val };
   });
 
@@ -349,7 +361,12 @@ export function RankResultPage() {
     <div className="flow-result">
       <div className="flow-result__card">
         <p className="badge">Analysis</p>
-        <div className="row" style={{ marginTop: 16, gap: 16 }}>
+
+        <div className="flow-result__radar">
+          <ScoreRadar scores={scores} />
+        </div>
+
+        <div className="row" style={{ marginTop: 8, gap: 16 }}>
           <RankPill rank={rank} score={Math.round(total)} />
           <div>
             <p className="t-h1 num">{Math.round(total)}</p>
@@ -765,6 +782,7 @@ export function BattleFightingPage() {
 export function BattleOutcomePage() {
   const nav = useNavigate();
   const [me, setMe] = useState("me");
+  const [revealDone, setRevealDone] = useState(false);
 
   useEffect(() => {
     api.me()
@@ -811,75 +829,62 @@ export function BattleOutcomePage() {
 
   return (
     <div className="flow-outcome">
-      <section
-        className={`flow-outcome__banner ${draw ? "is-lose" : won ? "is-win" : "is-lose"}`}
-      >
-        <p className="flow-outcome__verdict">
-          {draw ? "무승부" : won ? "승리" : "패배"}
-        </p>
-        <p className="t-body" style={{ color: "inherit", opacity: 0.85 }}>
-          {draw ? (
-            "랭크 점수 변동 없음"
-          ) : won ? (
-            <>
-              플레이어 점수 <span className="num">+8</span>
-            </>
-          ) : (
-            <>
-              플레이어 점수 <span className="num">-3</span>
-            </>
-          )}
-        </p>
-        <p className="t-cap" style={{ color: "inherit", opacity: 0.65, marginTop: 12 }}>
-          아래로 스크롤 · 분석 결과
-        </p>
+      <section className="flow-outcome__reveal">
+        <BattleGaugeReveal
+          leftName={myName}
+          rightName={oppName}
+          leftScores={myScores}
+          rightScores={oppScores}
+          onComplete={() => setRevealDone(true)}
+        />
       </section>
 
+      {revealDone ? (
+        <section
+          className={`flow-outcome__banner battle-gauge__verdict-enter ${
+            draw ? "is-lose" : won ? "is-win" : "is-lose"
+          }`}
+        >
+          <p className="flow-outcome__verdict">
+            {draw ? "무승부" : won ? "승리" : "패배"}
+          </p>
+          <p className="t-body" style={{ color: "inherit", opacity: 0.85 }}>
+            {draw ? (
+              "랭크 점수 변동 없음"
+            ) : won ? (
+              <>
+                플레이어 점수 <span className="num">+8</span>
+              </>
+            ) : (
+              <>
+                플레이어 점수 <span className="num">-3</span>
+              </>
+            )}
+          </p>
+          <div className="row" style={{ marginTop: 20, gap: 28, justifyContent: "center" }}>
+            <div>
+              <p className="t-cap" style={{ color: "inherit", opacity: 0.7 }}>
+                {myName}
+              </p>
+              <p className="t-h1 num" style={{ color: "inherit" }}>
+                {myResult}
+              </p>
+            </div>
+            <span style={{ opacity: 0.5 }}>VS</span>
+            <div>
+              <p className="t-cap" style={{ color: "inherit", opacity: 0.7 }}>
+                {oppName}
+              </p>
+              <p className="t-h1 num" style={{ color: "inherit" }}>
+                {oppResult}
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="flow-outcome__detail">
-        <div className="grid-2">
-          <article className="flow-panel stack" style={{ alignItems: "center" }}>
-            <Avatar name={myName} />
-            <p className="t-title">{myName}</p>
-            <p className="t-h1 num">{myResult}</p>
-          </article>
-          <article className="flow-panel stack" style={{ alignItems: "center" }}>
-            <Avatar name={oppName} />
-            <p className="t-title">{oppName}</p>
-            <p className="t-h1 num">{oppResult}</p>
-          </article>
-        </div>
-
-        <div className="flow-panel" style={{ marginTop: 20, overflowX: "auto" }}>
-          <h2 className="t-title" style={{ marginBottom: 12 }}>
-            항목별 비교
-          </h2>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>항목</th>
-                <th>{myName}</th>
-                <th>{oppName}</th>
-                <th>우세</th>
-              </tr>
-            </thead>
-            <tbody>
-              {BATTLE_SCORE_KEYS.map((r) => {
-                const a = myScores?.[r.key] ?? 0;
-                const b = oppScores?.[r.key] ?? 0;
-                return (
-                  <tr key={r.key}>
-                    <td>{r.label}</td>
-                    <td className="num">{a}</td>
-                    <td className="num">{b}</td>
-                    <td>{a === b ? "동점" : a > b ? myName : oppName}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="grid-2" style={{ marginTop: 20 }}>
+        <div className="grid-2" style={{ marginTop: 8 }}>
           <article className="flow-panel">
             <h3 className="t-title">피드백</h3>
             <p className="t-body" style={{ marginTop: 8 }}>

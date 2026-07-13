@@ -628,6 +628,20 @@
   padding: 28px;
 }
 
+.flow-result__radar {
+  margin: 20px 0 28px;
+  padding: 12px 8px 4px;
+  border-radius: var(--rounded-xl);
+  background: var(--color-surface-soft);
+}
+
+/* Outcome */
+.flow-outcome__reveal {
+  padding: 28px 16px 12px;
+  background: var(--color-canvas);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
 .flow-panel {
   background: var(--color-surface-soft);
   border-radius: var(--rounded-xl);

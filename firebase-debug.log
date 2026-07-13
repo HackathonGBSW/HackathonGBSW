@@ -1,0 +1,192 @@
+[debug] [2026-07-13T20:43:02.046Z] ----------------------------------------------------------------------
+[debug] [2026-07-13T20:43:02.049Z] Command:       /opt/homebrew/Cellar/node/26.3.0/bin/node /Users/neony/.npm/_npx/ba4f1959e38407b5/node_modules/.bin/firebase deploy --only auth --project doesgps
+[debug] [2026-07-13T20:43:02.049Z] CLI Version:   15.23.0
+[debug] [2026-07-13T20:43:02.049Z] Platform:      darwin
+[debug] [2026-07-13T20:43:02.049Z] Node Version:  v26.3.0
+[debug] [2026-07-13T20:43:02.049Z] Detected Agent: cursor
+[debug] [2026-07-13T20:43:02.049Z] Time:          Tue Jul 14 2026 05:43:02 GMT+0900 (Korean Standard Time)
+[debug] [2026-07-13T20:43:02.049Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-13T20:43:02.817Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-13T20:43:02.818Z] > authorizing via signed-in user (neonytheproducer@gmail.com)
+[debug] [2026-07-13T20:43:02.818Z] [iam] checking project doesgps for permissions ["firebase.projects.get","firebase.projects.update","firebaseauth.configs.update"]
+[debug] [2026-07-13T20:43:02.836Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:02.836Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:02.837Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/doesgps:testIamPermissions [none]
+[debug] [2026-07-13T20:43:02.837Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/doesgps:testIamPermissions  x-goog-user-project=doesgps
+[debug] [2026-07-13T20:43:02.837Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/doesgps:testIamPermissions {"permissions":["firebase.projects.get","firebase.projects.update","firebaseauth.configs.update"]}
+[debug] [2026-07-13T20:43:03.545Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/doesgps:testIamPermissions 200
+[debug] [2026-07-13T20:43:03.545Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/doesgps:testIamPermissions {"permissions":["firebase.projects.get","firebase.projects.update","firebaseauth.configs.update"]}
+[info] 
+[info] === Deploying to 'doesgps'...
+[info] 
+[info] i  deploying auth 
+[debug] [2026-07-13T20:43:03.546Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:03.546Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:03.547Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/doesgps/webApps pageSize=100
+[debug] [2026-07-13T20:43:04.368Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/doesgps/webApps 200
+[debug] [2026-07-13T20:43:04.369Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/doesgps/webApps {"apps":[{"name":"projects/doesgps/webApps/1:478358822808:web:717d212424b8b09fa195ed","appId":"1:478358822808:web:717d212424b8b09fa195ed","displayName":"doesgps","projectId":"doesgps","webId":"MmFhOGQxNDQtYjU3ZS00MDcxLTgzOWItYzhkYWEwNWQxMmFm","apiKeyId":"45038493-f942-4456-a8e5-3be94d865f64","state":"ACTIVE","expireTime":"1970-01-01T00:00:00Z","etag":"1_c67b0f09-bb58-4380-8180-41876970ee58"}]}
+[info] Enabling auth providers: email/password, Google sign-in...
+[debug] [2026-07-13T20:43:04.369Z] [provision] Starting Firebase app provisioning...
+[debug] [2026-07-13T20:43:04.369Z] [provision] Request: {
+  "appNamespace": "1:478358822808:web:717d212424b8b09fa195ed",
+  "parent": "projects/doesgps",
+  "firebaseAuthInput": {
+    "emailAuthProviderMode": "PROVIDER_ENABLED",
+    "googleSigninProviderMode": "PROVIDER_ENABLED",
+    "googleSigninProviderConfig": {
+      "publicDisplayName": "Does GPS",
+      "customerSupportEmail": "neonytheproducer@gmail.com",
+      "oauthRedirectUris": [
+        "http://localhost",
+        "http://localhost:5173",
+        "https://doesgps.web.app",
+        "https://doesgps.firebaseapp.com"
+      ]
+    }
+  },
+  "webInput": {}
+}
+[debug] [2026-07-13T20:43:04.370Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:04.370Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:04.370Z] >>> [apiv2][query] POST https://firebase.googleapis.com/v1alpha/firebase:provisionFirebaseApp [none]
+[debug] [2026-07-13T20:43:04.370Z] >>> [apiv2][body] POST https://firebase.googleapis.com/v1alpha/firebase:provisionFirebaseApp {"appNamespace":"1:478358822808:web:717d212424b8b09fa195ed","parent":"projects/doesgps","firebaseAuthInput":{"emailAuthProviderMode":"PROVIDER_ENABLED","googleSigninProviderMode":"PROVIDER_ENABLED","googleSigninProviderConfig":{"publicDisplayName":"Does GPS","customerSupportEmail":"neonytheproducer@gmail.com","oauthRedirectUris":["http://localhost","http://localhost:5173","https://doesgps.web.app","https://doesgps.firebaseapp.com"]}},"webInput":{}}
+[debug] [2026-07-13T20:43:06.026Z] <<< [apiv2][status] POST https://firebase.googleapis.com/v1alpha/firebase:provisionFirebaseApp 200
+[debug] [2026-07-13T20:43:06.026Z] <<< [apiv2][body] POST https://firebase.googleapis.com/v1alpha/firebase:provisionFirebaseApp {"name":"operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk"}
+[debug] [2026-07-13T20:43:06.026Z] [provision] Operation started: operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk
+[debug] [2026-07-13T20:43:06.027Z] [provision] Polling for operation completion...
+[debug] [2026-07-13T20:43:06.028Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:06.028Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:06.028Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk [none]
+[debug] [2026-07-13T20:43:06.777Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk 200
+[debug] [2026-07-13T20:43:06.778Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk {"name":"operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk"}
+[debug] [2026-07-13T20:43:06.978Z] [Provision Firebase App Poller] Retrying task index 0
+[debug] [2026-07-13T20:43:06.979Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:06.979Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:06.979Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk [none]
+[debug] [2026-07-13T20:43:07.763Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk 200
+[debug] [2026-07-13T20:43:07.763Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk {"name":"operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk"}
+[debug] [2026-07-13T20:43:08.163Z] [Provision Firebase App Poller] Retrying task index 0
+[debug] [2026-07-13T20:43:08.164Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:08.164Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:08.164Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk [none]
+[debug] [2026-07-13T20:43:08.702Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk 200
+[debug] [2026-07-13T20:43:08.702Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk {"name":"operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk"}
+[debug] [2026-07-13T20:43:09.504Z] [Provision Firebase App Poller] Retrying task index 0
+[debug] [2026-07-13T20:43:09.504Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:09.504Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:09.504Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk [none]
+[debug] [2026-07-13T20:43:10.021Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk 200
+[debug] [2026-07-13T20:43:10.021Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk {"name":"operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk"}
+[debug] [2026-07-13T20:43:11.623Z] [Provision Firebase App Poller] Retrying task index 0
+[debug] [2026-07-13T20:43:11.623Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:11.623Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:11.623Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk [none]
+[debug] [2026-07-13T20:43:12.294Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk 200
+[debug] [2026-07-13T20:43:12.297Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk {"name":"operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk"}
+[debug] [2026-07-13T20:43:15.499Z] [Provision Firebase App Poller] Retrying task index 0
+[debug] [2026-07-13T20:43:15.502Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:15.502Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:15.504Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk [none]
+[debug] [2026-07-13T20:43:16.111Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk 200
+[debug] [2026-07-13T20:43:16.111Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk {"name":"operations/workflows/MThiZTk0NjYtMTg2Yi00NTY5LThmNjItNDUxOWMwY2Y1M2Vk","done":true,"error":{"code":3,"message":"PROVISION_WEB_OAUTH_CLIENT_TASK: com.google.identity.boq.idaas.exception.GitkitClientException: code: INVALID_VALUE\nhttp status: 400\narguments: [INVALID_AUTHORIZED_DOMAIN : localhost:5173 should only contain the valid domain.]\n","details":[{"@type":"type.googleapis.com/util.StatusProto","code":3,"space":"generic","message":"PROVISION_WEB_OAUTH_CLIENT_TASK: com.google.identity.boq.idaas.exception.GitkitClientException: code: INVALID_VALUE\nhttp status: 400\narguments: [INVALID_AUTHORIZED_DOMAIN : localhost:5173 should only contain the valid domain.]\n"}]}}
+[debug] [2026-07-13T20:43:16.350Z] FirebaseError: PROVISION_WEB_OAUTH_CLIENT_TASK: com.google.identity.boq.idaas.exception.GitkitClientException: code: INVALID_VALUE
+http status: 400
+arguments: [INVALID_AUTHORIZED_DOMAIN : localhost:5173 should only contain the valid domain.]
+
+    at OperationPoller.poll (/Users/neony/.npm/_npx/ba4f1959e38407b5/node_modules/firebase-tools/lib/operation-poller.js:25:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async provisionFirebaseApp (/Users/neony/.npm/_npx/ba4f1959e38407b5/node_modules/firebase-tools/lib/management/provisioning/provision.js:101:24)
+    at async deploy (/Users/neony/.npm/_npx/ba4f1959e38407b5/node_modules/firebase-tools/lib/deploy/auth/deploy.js:47:5)
+    at async chain (/Users/neony/.npm/_npx/ba4f1959e38407b5/node_modules/firebase-tools/lib/deploy/index.js:45:9)
+    at async deploy (/Users/neony/.npm/_npx/ba4f1959e38407b5/node_modules/firebase-tools/lib/deploy/index.js:126:9)
+[error] 
+[error] Error: Failed to provision Firebase app: PROVISION_WEB_OAUTH_CLIENT_TASK: com.google.identity.boq.idaas.exception.GitkitClientException: code: INVALID_VALUE
+http status: 400
+arguments: [INVALID_AUTHORIZED_DOMAIN : localhost:5173 should only contain the valid domain.]
+
+[debug] [2026-07-13T20:43:21.564Z] ----------------------------------------------------------------------
+[debug] [2026-07-13T20:43:21.565Z] Command:       /opt/homebrew/Cellar/node/26.3.0/bin/node /Users/neony/.npm/_npx/ba4f1959e38407b5/node_modules/.bin/firebase deploy --only auth --project doesgps
+[debug] [2026-07-13T20:43:21.565Z] CLI Version:   15.23.0
+[debug] [2026-07-13T20:43:21.565Z] Platform:      darwin
+[debug] [2026-07-13T20:43:21.565Z] Node Version:  v26.3.0
+[debug] [2026-07-13T20:43:21.565Z] Detected Agent: cursor
+[debug] [2026-07-13T20:43:21.565Z] Time:          Tue Jul 14 2026 05:43:21 GMT+0900 (Korean Standard Time)
+[debug] [2026-07-13T20:43:21.565Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-13T20:43:22.243Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-13T20:43:22.244Z] > authorizing via signed-in user (neonytheproducer@gmail.com)
+[debug] [2026-07-13T20:43:22.244Z] [iam] checking project doesgps for permissions ["firebase.projects.get","firebase.projects.update","firebaseauth.configs.update"]
+[debug] [2026-07-13T20:43:22.256Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:22.256Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:22.257Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/doesgps:testIamPermissions [none]
+[debug] [2026-07-13T20:43:22.257Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/doesgps:testIamPermissions  x-goog-user-project=doesgps
+[debug] [2026-07-13T20:43:22.257Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/doesgps:testIamPermissions {"permissions":["firebase.projects.get","firebase.projects.update","firebaseauth.configs.update"]}
+[debug] [2026-07-13T20:43:22.709Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/doesgps:testIamPermissions 200
+[debug] [2026-07-13T20:43:22.710Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/doesgps:testIamPermissions {"permissions":["firebase.projects.get","firebase.projects.update","firebaseauth.configs.update"]}
+[info] 
+[info] === Deploying to 'doesgps'...
+[info] 
+[info] i  deploying auth 
+[debug] [2026-07-13T20:43:22.713Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:22.713Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:22.713Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/doesgps/webApps pageSize=100
+[debug] [2026-07-13T20:43:23.491Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/doesgps/webApps 200
+[debug] [2026-07-13T20:43:23.491Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/doesgps/webApps {"apps":[{"name":"projects/doesgps/webApps/1:478358822808:web:717d212424b8b09fa195ed","appId":"1:478358822808:web:717d212424b8b09fa195ed","displayName":"doesgps","projectId":"doesgps","webId":"MmFhOGQxNDQtYjU3ZS00MDcxLTgzOWItYzhkYWEwNWQxMmFm","apiKeyId":"45038493-f942-4456-a8e5-3be94d865f64","state":"ACTIVE","expireTime":"1970-01-01T00:00:00Z","etag":"1_c67b0f09-bb58-4380-8180-41876970ee58"}]}
+[info] Enabling auth providers: email/password, Google sign-in...
+[debug] [2026-07-13T20:43:23.492Z] [provision] Starting Firebase app provisioning...
+[debug] [2026-07-13T20:43:23.492Z] [provision] Request: {
+  "appNamespace": "1:478358822808:web:717d212424b8b09fa195ed",
+  "parent": "projects/doesgps",
+  "firebaseAuthInput": {
+    "emailAuthProviderMode": "PROVIDER_ENABLED",
+    "googleSigninProviderMode": "PROVIDER_ENABLED",
+    "googleSigninProviderConfig": {
+      "publicDisplayName": "Does GPS",
+      "customerSupportEmail": "neonytheproducer@gmail.com",
+      "oauthRedirectUris": [
+        "http://localhost",
+        "https://doesgps.web.app",
+        "https://doesgps.firebaseapp.com"
+      ]
+    }
+  },
+  "webInput": {}
+}
+[debug] [2026-07-13T20:43:23.492Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:23.492Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:23.492Z] >>> [apiv2][query] POST https://firebase.googleapis.com/v1alpha/firebase:provisionFirebaseApp [none]
+[debug] [2026-07-13T20:43:23.492Z] >>> [apiv2][body] POST https://firebase.googleapis.com/v1alpha/firebase:provisionFirebaseApp {"appNamespace":"1:478358822808:web:717d212424b8b09fa195ed","parent":"projects/doesgps","firebaseAuthInput":{"emailAuthProviderMode":"PROVIDER_ENABLED","googleSigninProviderMode":"PROVIDER_ENABLED","googleSigninProviderConfig":{"publicDisplayName":"Does GPS","customerSupportEmail":"neonytheproducer@gmail.com","oauthRedirectUris":["http://localhost","https://doesgps.web.app","https://doesgps.firebaseapp.com"]}},"webInput":{}}
+[debug] [2026-07-13T20:43:25.097Z] <<< [apiv2][status] POST https://firebase.googleapis.com/v1alpha/firebase:provisionFirebaseApp 200
+[debug] [2026-07-13T20:43:25.097Z] <<< [apiv2][body] POST https://firebase.googleapis.com/v1alpha/firebase:provisionFirebaseApp {"name":"operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm"}
+[debug] [2026-07-13T20:43:25.097Z] [provision] Operation started: operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm
+[debug] [2026-07-13T20:43:25.097Z] [provision] Polling for operation completion...
+[debug] [2026-07-13T20:43:25.098Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:25.098Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:25.098Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm [none]
+[debug] [2026-07-13T20:43:25.687Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm 200
+[debug] [2026-07-13T20:43:25.688Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm {"name":"operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm"}
+[debug] [2026-07-13T20:43:25.889Z] [Provision Firebase App Poller] Retrying task index 0
+[debug] [2026-07-13T20:43:25.890Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:25.890Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:25.890Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm [none]
+[debug] [2026-07-13T20:43:26.419Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm 200
+[debug] [2026-07-13T20:43:26.420Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm {"name":"operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm"}
+[debug] [2026-07-13T20:43:26.821Z] [Provision Firebase App Poller] Retrying task index 0
+[debug] [2026-07-13T20:43:26.822Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:26.822Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:26.822Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm [none]
+[debug] [2026-07-13T20:43:27.378Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm 200
+[debug] [2026-07-13T20:43:27.378Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm {"name":"operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm"}
+[debug] [2026-07-13T20:43:28.179Z] [Provision Firebase App Poller] Retrying task index 0
+[debug] [2026-07-13T20:43:28.179Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:28.179Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:28.179Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm [none]
+[debug] [2026-07-13T20:43:28.708Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm 200
+[debug] [2026-07-13T20:43:28.726Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm {"name":"operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm"}
+[debug] [2026-07-13T20:43:30.327Z] [Provision Firebase App Poller] Retrying task index 0
+[debug] [2026-07-13T20:43:30.330Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:30.330Z] Checked if tokens are valid: true, expires at: 1783978967283
+[debug] [2026-07-13T20:43:30.330Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm [none]
+[debug] [2026-07-13T20:43:30.841Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm 200
+[debug] [2026-07-13T20:43:30.841Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm {"name":"operations/workflows/ZGQ4NTEzM2EtNjAyMi00ZTE4LWFjYTQtNDFmYjA4NTg0OGRm"}

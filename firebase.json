@@ -1,0 +1,16 @@
+{
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Does GPS",
+        "supportEmail": "neonytheproducer@gmail.com",
+        "authorizedRedirectUris": [
+          "http://localhost",
+          "https://doesgps.web.app",
+          "https://doesgps.firebaseapp.com"
+        ]
+      }
+    }
+  }
+}
