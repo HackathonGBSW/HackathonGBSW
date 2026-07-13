@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
-import pandas as pd
-
 from .models import RepoSnapshot
 
 
@@ -48,8 +45,7 @@ def preprocess_snapshot(repo: RepoSnapshot) -> dict[str, Any]:
     has_deployment_config = any(
         any(marker in path for marker in deployment_markers) for path in lower_files
     )
-    language_series = pd.Series(repo.languages, dtype="float64")
-    total_language_bytes = float(np.sum(language_series.to_numpy())) if not language_series.empty else 0.0
+    total_language_bytes = float(sum(repo.languages.values()))
     language_statistics = [
         {
             "language": str(language),
@@ -57,7 +53,9 @@ def preprocess_snapshot(repo: RepoSnapshot) -> dict[str, Any]:
             "percentage": round(float(byte_count) / total_language_bytes * 100, 2)
             if total_language_bytes else 0.0,
         }
-        for language, byte_count in language_series.sort_values(ascending=False).items()
+        for language, byte_count in sorted(
+            repo.languages.items(), key=lambda item: item[1], reverse=True
+        )
     ]
     return {
         "user": {

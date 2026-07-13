@@ -6,6 +6,8 @@ calculated results and generates feedback.
 
 from __future__ import annotations
 
+import logging
+
 from github_battle_ai import (
     AnalysisError,
     LLMAnalysisError,
@@ -14,6 +16,8 @@ from github_battle_ai import (
     analyze_repo_detailed,
     rank_from_score,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class LLMError(Exception):
@@ -44,9 +48,21 @@ def _feedback_text(feedback: dict) -> str:
 def analyze_portfolio(repository: str, field: str) -> dict:
     """Return the legacy Flask portfolio contract from deterministic analysis."""
     try:
-        result = analyze_repo_detailed(repository, field, use_llm=True)
+        # use_llm=None lets the package auto-detect from OPENAI_API_KEY, instead
+        # of forcing an LLM call that hard-fails whenever the key is unset.
+        result = analyze_repo_detailed(repository, field, use_llm=None)
     except (LLMAnalysisError, LLMConfigurationError) as exc:
         raise LLMError(str(exc)) from exc
+    except ValueError as exc:
+        # Bad input (blank field, malformed URL) -> a 422, not an unhandled 500.
+        raise AnalysisError(str(exc)) from exc
+
+    if result.get("analysis_mode") == "rules_fallback":
+        logger.warning(
+            "LLM feedback failed for %s, fell back to rule-based feedback: %s",
+            repository,
+            result.get("warning"),
+        )
 
     scores = result["weighted_scores"]
     return {
@@ -68,10 +84,22 @@ def compare_portfolios(repository1: str, repository2: str, field: str) -> dict:
     """Return legacy battle fields while using deterministic category scores."""
     try:
         result = analyze_portfolio_comparison(
-            repository1, repository2, field, use_llm=True
+            repository1, repository2, field, use_llm=None
         )
     except (LLMAnalysisError, LLMConfigurationError) as exc:
         raise LLMError(str(exc)) from exc
+    except ValueError as exc:
+        raise AnalysisError(str(exc)) from exc
+
+    if (
+        result["portfolio1"].get("analysis_mode") == "rules_fallback"
+        or result["portfolio2"].get("analysis_mode") == "rules_fallback"
+    ):
+        logger.warning(
+            "LLM feedback failed during comparison of %s vs %s, fell back to rule-based feedback",
+            repository1,
+            repository2,
+        )
 
     feedback = result["comparison_feedback"]
     return {

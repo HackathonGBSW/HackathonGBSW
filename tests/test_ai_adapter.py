@@ -27,6 +27,26 @@ class AIAdapterTests(unittest.TestCase):
         self.assertEqual(result["completeness_score"], 24)
         self.assertEqual(result["structur_score"], 8)
 
+    def test_blank_field_raises_analysis_error_not_value_error(self) -> None:
+        with patch(
+            "llm_analyzer.analyze_repo_detailed",
+            side_effect=ValueError("field is required"),
+        ):
+            with self.assertRaises(llm_analyzer.AnalysisError):
+                llm_analyzer.analyze_portfolio("https://github.com/team/project", "  ")
+
+    def test_same_repository_battle_raises_analysis_error_not_value_error(self) -> None:
+        with patch(
+            "llm_analyzer.analyze_portfolio_comparison",
+            side_effect=ValueError("The two GitHub inputs resolved to the same repository"),
+        ):
+            with self.assertRaises(llm_analyzer.AnalysisError):
+                llm_analyzer.compare_portfolios(
+                    "https://github.com/team/project",
+                    "https://github.com/team/project.git",
+                    "backend",
+                )
+
     def test_comparison_maps_to_existing_battle_contract(self) -> None:
         raw1 = {key: 8 for key in (
             "completeness", "structure", "tech", "docs", "test", "deploy", "github"
