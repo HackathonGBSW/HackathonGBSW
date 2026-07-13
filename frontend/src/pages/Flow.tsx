@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Avatar, Button, Input, RankPill } from "../components/ui";
 import { DEMO, FIELDS, PORTFOLIO_FIELDS, SCORE_ITEMS, api } from "../lib/api";
@@ -203,8 +203,14 @@ export function RankPage() {
 /** 분석 중 로딩 */
 export function RankAnalyzingPage() {
   const nav = useNavigate();
+  const startedRef = useRef(false);
 
   useEffect(() => {
+    // Guards against React 19 StrictMode's dev-only double-invoke of effects,
+    // which would otherwise fire api.createPortfolio() (a POST) twice per visit.
+    if (startedRef.current) return;
+    startedRef.current = true;
+
     let cancelled = false;
 
     async function run() {

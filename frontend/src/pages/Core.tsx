@@ -154,7 +154,6 @@ export function SignupPage() {
 
 export function OnboardingPage() {
   const nav = useNavigate();
-  const [username, setUsername] = useState(DEMO.username);
   const [field, setField] = useState<string>(FIELDS[1]);
   const [github, setGithub] = useState("");
   const [bio, setBio] = useState("");
@@ -186,12 +185,10 @@ export function OnboardingPage() {
         <span className="badge">초기 설정</span>
         <h1 className="t-h1">프로필 설정</h1>
         <p className="t-cap">신규 사용자: 플레이어 점수 0 · 랭크 F</p>
-        <Input
-          label="사용자 이름"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-        />
+        <div className="stack" style={{ gap: 4 }}>
+          <span className="field__label">사용자 이름</span>
+          <p className="t-sm">{DEMO.username}</p>
+        </div>
         <div className="stack" style={{ gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>주 분야</span>
           <div className="chips">
