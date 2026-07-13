@@ -31,8 +31,6 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
 )
 db = SQLAlchemy()
 db.init_app(app)
-with app.app_context():
-    db.create_all()
 CORS(
     app,
     supports_credentials=True,
@@ -160,6 +158,9 @@ class MatchQueue(db.Model):
         nullable=True
     )
     created_at = db.Column(db.DateTime, default=db.func.now())
+
+with app.app_context():
+    db.create_all()
 
 @app.get("/")
 def main():
