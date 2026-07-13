@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Button, Input, PageHeader, Avatar, RankPill } from "../components/ui";
+import { Button, Input } from "../components/ui";
 import { api, DEMO, FIELDS } from "../lib/api";
 
 function AuthShell({ children }: { children: ReactNode }) {
@@ -224,99 +224,6 @@ export function OnboardingPage() {
         </label>
         <Button type="submit">저장하고 시작</Button>
       </form>
-    </div>
-  );
-}
-
-export function DashboardPage() {
-  const u = DEMO;
-  const battles = u.wins + u.losses;
-  return (
-    <div className="stack" style={{ gap: 28 }}>
-      <PageHeader
-        title="홈"
-        description="활동 요약과 빠른 실행"
-        actions={
-          <Link to="/app/portfolios/new">
-            <Button>포트폴리오 분석하기</Button>
-          </Link>
-        }
-      />
-      <section className="card">
-        <div className="row" style={{ alignItems: "flex-start", gap: 16 }}>
-          <Avatar name={u.username} size="lg" />
-          <div className="stack" style={{ gap: 6, flex: 1 }}>
-            <div className="row" style={{ justifyContent: "space-between" }}>
-              <h2 className="t-title">{u.username}</h2>
-              <RankPill rank={u.player_rank} score={u.player_rank_score} />
-            </div>
-            <p className="t-sm">{u.main_field}</p>
-            <p className="t-cap">
-              승률{" "}
-              <span className="num">{(u.battle_win_rate * 100).toFixed(1)}%</span> · 최고{" "}
-              {u.portfolio_best_rank} · 평균 {u.portfolio_avg_rank}
-            </p>
-          </div>
-        </div>
-      </section>
-      <section className="grid-3">
-        <div className="card card--soft">
-          <p className="t-cap">포트폴리오</p>
-          <p className="t-h2 num">6</p>
-        </div>
-        <div className="card card--soft">
-          <p className="t-cap">대결</p>
-          <p className="t-title num">
-            {battles}전 {u.wins}승 {u.losses}패
-          </p>
-        </div>
-        <div className="card card--soft">
-          <p className="t-cap">최근 점수</p>
-          <p className="t-h2 num up">+13</p>
-        </div>
-      </section>
-      <section className="stack">
-        <h2 className="t-title">빠른 실행</h2>
-        <div className="row" style={{ flexWrap: "wrap" }}>
-          <Link to="/app/portfolios/new">
-            <Button>분석하기</Button>
-          </Link>
-          <Link to="/app/battle/match">
-            <Button variant="secondary">랜덤 매칭</Button>
-          </Link>
-          <Link to="/app/battle/friend">
-            <Button variant="secondary">친구와 대결</Button>
-          </Link>
-          <Link to="/app/portfolios">
-            <Button variant="secondary">내 포트폴리오</Button>
-          </Link>
-          <Link to="/app/battles">
-            <Button variant="secondary">대결 기록</Button>
-          </Link>
-        </div>
-      </section>
-      <section className="stack">
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <h2 className="t-title">최근 포트폴리오</h2>
-          <Link to="/app/portfolios">전체</Link>
-        </div>
-        <div className="grid-2">
-          {[
-            { id: 1, name: "Secure API Gateway", field: "백엔드", score: 86, rank: "A" },
-            { id: 2, name: "Realtime Chat Core", field: "풀스택", score: 78, rank: "C" },
-          ].map((p) => (
-            <article key={p.id} className="card">
-              <div className="row" style={{ justifyContent: "space-between" }}>
-                <span className="t-cap">{p.field}</span>
-                <RankPill rank={p.rank} score={p.score} />
-              </div>
-              <h3 className="t-title" style={{ marginTop: 10 }}>
-                <Link to={`/app/portfolios/${p.id}`}>{p.name}</Link>
-              </h3>
-            </article>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
