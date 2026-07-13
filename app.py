@@ -338,10 +338,12 @@ def signin():
             data = {"username": request.form.get("username"), "password": request.form.get("password")}
         else:
             data = request.get_json() or request.json
-        if not data == None:
-            user = db.get_or_404(User, data["username"])
+        if data is not None:
+            user = User.query.get(data.get("username"))
+            if not user or user.password != data.get("password"):
+                return "", 404
             session["username"] = user.username
-            return ok_data({"username": user.username, "password": user.password})
+            return ok_data({"username": user.username})
     return method_not_allowed()
 @app.get("/signout")
 def signout():
@@ -615,4 +617,5 @@ def my():
     return unauthorized()
 
 if __name__ == "__main__":
-    app.run()
+    # macOS AirPlay Receiver occupies :5000 — use 5001 for local Vite proxy.
+    app.run(host="127.0.0.1", port=5001, debug=True)

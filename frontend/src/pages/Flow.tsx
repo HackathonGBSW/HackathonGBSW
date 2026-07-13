@@ -1,18 +1,63 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Avatar, Button, Input, RankPill } from "../components/ui";
-import { DEMO, FIELDS, PORTFOLIO_FIELDS, SCORE_ITEMS, api, toSafeHttpUrl } from "../lib/api";
+import {
+  BATTLE_SCORE_KEYS,
+  DEMO,
+  FIELDS,
+  PORTFOLIO_FIELDS,
+  SCORE_ITEMS,
+  api,
+  githubProfileUrl,
+  isBattle,
+  setAuthUsername,
+  toSafeHttpUrl,
+  type Battle,
+  type Portfolio,
+  type Profile,
+} from "../lib/api";
 import profileAvatar from "../assets/profile-card-avatar.jpg";
 import profileBanner from "../assets/profile-card-banner.jpg";
 import "./flow.css";
 
+const LAST_BATTLE_KEY = "last-battle";
+const PENDING_ANALYZE_KEY = "pending-analyze";
+const LAST_ANALYZE_KEY = "last-analyze";
+const PENDING_BATTLE_KEY = "pending-battle";
+
+function formatWinRate(rate: number | null, wins: number, losses: number) {
+  if (rate == null || wins + losses === 0) return `기록 없음 (0승 0패)`;
+  return `${(rate * 100).toFixed(1)}% (${wins}승 ${losses}패)`;
+}
+
 /** 메인(마이페이지): 넓은 프로필 카드 + 스크롤 시 랭크받기/대결하기 반반 */
 export function MainPage() {
-  const u = DEMO;
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await api.me();
+        setAuthUsername(me.username);
+        const p = await api.getProfile(me.username);
+        if (!cancelled) setProfile(p);
+      } catch {
+        if (!cancelled) setProfile(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const u = profile ?? DEMO;
+  const isDemo = !profile;
   const rankScore = Math.min(100, Math.max(0, u.player_rank_score));
-  const battleRate = `${(u.battle_win_rate * 100).toFixed(1)}%`;
-  const playerTier = "브론즈 II";
-  const nextTier = "브론즈 III";
+  const githubHref = githubProfileUrl(u.github_username);
   const categoryChips = [
     u.main_field ?? FIELDS[0],
     ...FIELDS.filter((field) => field !== u.main_field),
@@ -20,24 +65,34 @@ export function MainPage() {
   const profileStats = [
     { label: "사용자 이름", value: u.username },
     { label: "주분야", value: u.main_field ?? "미선택" },
-    { label: "플레이어 랭크", value: playerTier },
+    { label: "플레이어 랭크", value: u.player_rank },
     {
       label: "대결 승률",
-      value: `${battleRate} (${u.wins}승 ${u.losses}패)`,
+      value: formatWinRate(u.battle_win_rate, u.battle_win, u.battle_lose),
     },
-    { label: "포폴 최고 랭크", value: u.portfolio_best_rank },
-    { label: "포폴 평균 랭크", value: u.portfolio_avg_rank },
+    { label: "포폴 최고 랭크", value: u.portfolio_best_rank ?? "—" },
+    { label: "포폴 평균 랭크", value: u.portfolio_avg_rank ?? "—" },
   ];
 
   return (
     <div className="flow-main">
       <section className="flow-hero" aria-label="메인 프로필">
+        {loading ? (
+          <p className="t-cap" style={{ padding: 24 }}>
+            프로필 불러오는 중…
+          </p>
+        ) : null}
+        {isDemo && !loading ? (
+          <p className="t-cap" style={{ padding: "0 24px 12px" }}>
+            미리보기 모드 — 로그인하면 실제 프로필이 표시됩니다.
+          </p>
+        ) : null}
         <article className="profile-card">
           <div className="profile-card__banner">
             <img src={profileBanner} alt="" />
             <div className="profile-card__rank">
               <span>PLAYER RANK</span>
-              <strong>{playerTier}</strong>
+              <strong>{u.player_rank}</strong>
             </div>
           </div>
 
@@ -53,7 +108,9 @@ export function MainPage() {
               </div>
             </div>
 
-            <p className="profile-card__intro">{u.bio}</p>
+            <p className="profile-card__intro">
+              {isDemo ? DEMO.bio : "근거 기반 포트폴리오로 실력을 증명합니다."}
+            </p>
 
             <div className="profile-card__chips" aria-label="기술 및 직무 카테고리">
               {categoryChips.map((field, index) => (
@@ -81,17 +138,17 @@ export function MainPage() {
             <div className="profile-card__meta">
               <a
                 className="profile-card__github"
-                href={toSafeHttpUrl(u.github_url)}
+                href={githubHref}
                 target="_blank"
                 rel="noreferrer"
               >
-                @ {u.github_url ?? "GitHub URL을 등록해주세요"}
+                @ {u.github_username || "GitHub를 등록해주세요"}
               </a>
 
               <div className="profile-card__meter" aria-label="플레이어 랭크 점수">
                 <div>
-                  <span>{nextTier}까지</span>
-                  <strong>{rankScore}/100</strong>
+                  <span>플레이어 점수</span>
+                  <strong className="num">{u.player_rank_score}</strong>
                 </div>
                 <i>
                   <span style={{ width: `${rankScore}%` }} />
@@ -118,7 +175,7 @@ export function MainPage() {
   );
 }
 
-/** 랭크 받기: 분야 선택 + 깃허브 URL + 분석 버튼(우하단) */
+/** 랭크 받기: 분야 선택 + 깃허브 URL + 분석 버튼 */
 export function RankPage() {
   const nav = useNavigate();
   const [field, setField] = useState<(typeof PORTFOLIO_FIELDS)[number]>(
@@ -129,13 +186,18 @@ export function RankPage() {
 
   function onAnalyze(e: FormEvent) {
     e.preventDefault();
-    if (!github.trim()) {
+    const repository = github.trim();
+    if (!repository) {
       setError("GitHub URL을 입력하세요.");
       return;
     }
+    if (!toSafeHttpUrl(repository)) {
+      setError("올바른 http(s) GitHub URL을 입력하세요.");
+      return;
+    }
     sessionStorage.setItem(
-      "pending-analyze",
-      JSON.stringify({ field, github_url: github.trim() }),
+      PENDING_ANALYZE_KEY,
+      JSON.stringify({ field, repository }),
     );
     nav("/app/rank/analyzing");
   }
@@ -200,63 +262,37 @@ export function RankPage() {
   );
 }
 
-/** 분석 중 로딩 */
 async function submitPendingAnalyze(): Promise<string> {
-  const raw = sessionStorage.getItem("pending-analyze");
-  if (!raw) return "1";
+  const raw = sessionStorage.getItem(PENDING_ANALYZE_KEY);
+  if (!raw) throw new Error("분석할 저장소 정보가 없습니다.");
 
-  try {
-    const body = JSON.parse(raw) as { field: string; github_url: string };
-    const res = await api.createPortfolio(body);
-    sessionStorage.setItem("last-analyze", JSON.stringify(res));
-    return String(res.portfolio_id);
-  } catch {
-    sessionStorage.setItem(
-      "last-analyze",
-      JSON.stringify({
-        portfolio_id: 1,
-        total_score: 86,
-        rank: "A",
-        player_rank_score_gained: 13,
-        feedback: {
-          good: "CI 테스트와 배포 설정이 명확합니다.",
-          improve: "OpenAPI 명세를 추가하면 문서화 점수를 올릴 수 있습니다.",
-        },
-        scores: {
-          completeness: 26,
-          structure: 8,
-          tech: 12,
-          docs: 3.5,
-          test: 3.5,
-          deploy: 12,
-          github: 17,
-        },
-      }),
-    );
-    return "1";
-  }
+  const body = JSON.parse(raw) as { field: string; repository: string };
+  const res = await api.createPortfolio(body);
+  sessionStorage.setItem(LAST_ANALYZE_KEY, JSON.stringify(res));
+  sessionStorage.removeItem(PENDING_ANALYZE_KEY);
+  return String(res.portfolio_id);
 }
 
 export function RankAnalyzingPage() {
   const nav = useNavigate();
-  // Shared across React 19 StrictMode's dev-only double-invoke of this effect,
-  // so the underlying POST (api.createPortfolio) fires only once per visit —
-  // while each invocation still gets its own `cancelled` flag, so the one that
-  // actually stays mounted is the one whose timer/navigation goes through.
+  const [error, setError] = useState("");
   const requestRef = useRef<Promise<string> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function run() {
-      if (!requestRef.current) {
-        requestRef.current = submitPendingAnalyze();
-      }
-      const resultId = await requestRef.current;
-
-      window.setTimeout(() => {
+      try {
+        if (!requestRef.current) {
+          requestRef.current = submitPendingAnalyze();
+        }
+        const resultId = await requestRef.current;
         if (!cancelled) nav(`/app/rank/result/${resultId}`, { replace: true });
-      }, 1800);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "분석에 실패했습니다.");
+        }
+      }
     }
 
     void run();
@@ -264,6 +300,18 @@ export function RankAnalyzingPage() {
       cancelled = true;
     };
   }, [nav]);
+
+  if (error) {
+    return (
+      <div className="flow-loading">
+        <div className="flow-loading__card">
+          <h1 className="t-h1">분석 실패</h1>
+          <p className="t-body">{error}</p>
+          <Button onClick={() => nav("/app/rank")}>다시 시도</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flow-loading">
@@ -276,27 +324,24 @@ export function RankAnalyzingPage() {
   );
 }
 
-/** 분석 결과 + 메인으로 돌아가기(우하단) */
 export function RankResultPage() {
   const nav = useNavigate();
   const cached = (() => {
     try {
-      return JSON.parse(sessionStorage.getItem("last-analyze") ?? "null");
+      return JSON.parse(sessionStorage.getItem(LAST_ANALYZE_KEY) ?? "null");
     } catch {
       return null;
     }
   })();
 
-  const total = cached?.total_score ?? 86;
-  const rank = cached?.rank ?? "A";
-  const gained = cached?.player_rank_score_gained ?? 13;
-  const good = cached?.feedback?.good ?? "CI 테스트와 배포 설정이 명확합니다.";
-  const improve =
-    cached?.feedback?.improve ??
-    "OpenAPI 명세를 추가하면 문서화 점수를 올릴 수 있습니다.";
+  const total = cached?.total_score ?? 0;
+  const rank = cached?.rank ?? "F";
+  const gained = cached?.player_rank_score_gained ?? 0;
+  const good = cached?.feedback?.good ?? "—";
+  const improve = cached?.feedback?.improve ?? "—";
 
   const scoreRows = SCORE_ITEMS.map((item) => {
-    const val = cached?.scores?.[item.key] ?? item.max * 0.8;
+    const val = cached?.scores?.[item.key] ?? 0;
     return { ...item, value: val };
   });
 
@@ -349,18 +394,13 @@ export function RankResultPage() {
         </div>
       </div>
 
-      <button
-        type="button"
-        className="flow-fab"
-        onClick={() => nav("/app")}
-      >
+      <button type="button" className="flow-fab" onClick={() => nav("/app")}>
         메인으로
       </button>
     </div>
   );
 }
 
-/** 대결: 매칭하기 / 친구와 대결하기 */
 export function BattleHomePage() {
   return (
     <div className="flow-battle-home">
@@ -390,14 +430,134 @@ export function BattleHomePage() {
   );
 }
 
-export function BattleMatchFlowPage() {
-  const nav = useNavigate();
-  const [phase, setPhase] = useState<"search" | "found">("search");
+function useMyPortfolios() {
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const t = window.setTimeout(() => setPhase("found"), 1600);
-    return () => window.clearTimeout(t);
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await api.listPortfolios();
+        if (!cancelled) setPortfolios(rows);
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "포트폴리오를 불러오지 못했습니다. 로그인하세요.",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  return { portfolios, error, loading };
+}
+
+export function BattleMatchFlowPage() {
+  const nav = useNavigate();
+  const { portfolios, error: loadError, loading } = useMyPortfolios();
+  const [portfolioId, setPortfolioId] = useState<number | "">("");
+  const [phase, setPhase] = useState<"form" | "search" | "error">("form");
+  const [error, setError] = useState("");
+  const [statusText, setStatusText] = useState("같은 분야 · 랭크 차이 1 이내 상대 검색");
+  const pollRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (portfolios.length && portfolioId === "") {
+      setPortfolioId(portfolios[0].id);
+    }
+  }, [portfolios, portfolioId]);
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) window.clearInterval(pollRef.current);
+    };
+  }, []);
+
+  async function startMatch() {
+    const selected = portfolios.find((p) => p.id === portfolioId);
+    if (!selected) {
+      setError("대결에 사용할 포트폴리오를 선택하세요.");
+      return;
+    }
+    setPhase("search");
+    setError("");
+    setStatusText("매칭 중…");
+
+    try {
+      const result = await api.createMatch({
+        field: selected.field,
+        portfolio_id: selected.id,
+      });
+
+      if (isBattle(result)) {
+        sessionStorage.setItem(LAST_BATTLE_KEY, JSON.stringify(result));
+        nav("/app/battle/fighting", { replace: true });
+        return;
+      }
+
+      setStatusText("대기열에 등록됨 — 상대를 기다리는 중…");
+      pollRef.current = window.setInterval(async () => {
+        try {
+          const status = await api.getMatchStatus();
+          if (status.status === "matched" && status.matched_battle_id) {
+            if (pollRef.current) window.clearInterval(pollRef.current);
+            const battle = await api.getBattle(status.matched_battle_id);
+            sessionStorage.setItem(LAST_BATTLE_KEY, JSON.stringify(battle));
+            nav("/app/battle/fighting", { replace: true });
+          }
+        } catch {
+          /* keep polling */
+        }
+      }, 2000);
+    } catch (err) {
+      setPhase("error");
+      setError(err instanceof Error ? err.message : "매칭에 실패했습니다.");
+    }
+  }
+
+  async function cancel() {
+    if (pollRef.current) window.clearInterval(pollRef.current);
+    try {
+      await api.cancelMatch();
+    } catch {
+      /* ignore */
+    }
+    nav("/app/battle");
+  }
+
+  if (loading) {
+    return (
+      <div className="flow-loading">
+        <div className="flow-loading__card">
+          <div className="flow-loading__spin" aria-hidden />
+          <p className="t-body">포트폴리오 불러오는 중…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError || portfolios.length === 0) {
+    return (
+      <div className="flow-loading">
+        <div className="flow-loading__card">
+          <h1 className="t-h1">매칭 불가</h1>
+          <p className="t-body">
+            {loadError || "먼저 랭크 받기에서 포트폴리오를 등록하세요."}
+          </p>
+          <Button onClick={() => nav("/app/rank")}>랭크 받으러 가기</Button>
+        </div>
+      </div>
+    );
+  }
 
   if (phase === "search") {
     return (
@@ -405,8 +565,8 @@ export function BattleMatchFlowPage() {
         <div className="flow-loading__card">
           <div className="flow-loading__spin" aria-hidden />
           <h1 className="t-h1">매칭 중</h1>
-          <p className="t-body">같은 분야 · 랭크 차이 1 이내 상대 검색</p>
-          <Button variant="secondary" onClick={() => nav("/app/battle")}>
+          <p className="t-body">{statusText}</p>
+          <Button variant="secondary" onClick={() => void cancel()}>
             취소
           </Button>
         </div>
@@ -415,25 +575,31 @@ export function BattleMatchFlowPage() {
   }
 
   return (
-    <div className="flow-loading">
-      <div className="flow-loading__card" style={{ textAlign: "left" }}>
-        <h1 className="t-h1">상대 발견</h1>
-        <div className="row" style={{ marginTop: 16, gap: 12 }}>
-          <Avatar name="opponent" />
-          <div>
-            <p className="t-title">opponent</p>
-            <p className="t-cap">랭크 B · 승률 58%</p>
-          </div>
-        </div>
-        <p className="t-body" style={{ marginTop: 12 }}>
-          상세 점수는 시작 전 비공개입니다.
-        </p>
-        <div className="row" style={{ marginTop: 20 }}>
-          <Button onClick={() => nav("/app/battle/fighting")}>대결 시작</Button>
-          <Button variant="secondary" onClick={() => nav("/app/battle")}>
-            취소
-          </Button>
-        </div>
+    <div className="flow-battle-home">
+      <div className="flow-battle-home__card stack">
+        <h1 className="t-h1">매칭하기</h1>
+        <p className="t-body">내 포트폴리오를 고르면 같은 분야·유사 랭크 상대와 매칭합니다.</p>
+        <label className="field">
+          <span className="field__label">내 포트폴리오</span>
+          <select
+            className="field__input"
+            value={portfolioId}
+            onChange={(e) => setPortfolioId(Number(e.target.value))}
+          >
+            {portfolios.map((p) => (
+              <option key={p.id} value={p.id}>
+                [{p.rank}] {p.field} — {p.repository}
+              </option>
+            ))}
+          </select>
+        </label>
+        {error || phase === "error" ? (
+          <p style={{ color: "var(--color-semantic-down)", fontSize: 13 }}>{error}</p>
+        ) : null}
+        <Button onClick={() => void startMatch()}>매칭 시작</Button>
+        <Button type="button" variant="secondary" onClick={() => nav("/app/battle")}>
+          뒤로
+        </Button>
       </div>
     </div>
   );
@@ -441,25 +607,111 @@ export function BattleMatchFlowPage() {
 
 export function BattleFriendFlowPage() {
   const nav = useNavigate();
-  const [name, setName] = useState("");
+  const { portfolios, error: loadError, loading } = useMyPortfolios();
+  const [portfolioId, setPortfolioId] = useState<number | "">("");
+  const [opponent, setOpponent] = useState("");
+  const [opponentPortfolioId, setOpponentPortfolioId] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (portfolios.length && portfolioId === "") {
+      setPortfolioId(portfolios[0].id);
+    }
+  }, [portfolios, portfolioId]);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    const selected = portfolios.find((p) => p.id === portfolioId);
+    const oppId = Number(opponentPortfolioId);
+    if (!selected || !opponent.trim() || !oppId) {
+      setError("상대 이름과 양쪽 포트폴리오를 모두 입력하세요.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      const battle = await api.createFriendBattle({
+        field: selected.field,
+        opponent_username: opponent.trim(),
+        portfolio_id: selected.id,
+        opponent_portfolio_id: oppId,
+      });
+      sessionStorage.setItem(LAST_BATTLE_KEY, JSON.stringify(battle));
+      sessionStorage.setItem(
+        PENDING_BATTLE_KEY,
+        JSON.stringify({ me: selected.username, opponent: opponent.trim() }),
+      );
+      nav("/app/battle/fighting", { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "대결에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flow-loading">
+        <div className="flow-loading__card">
+          <div className="flow-loading__spin" aria-hidden />
+          <p className="t-body">포트폴리오 불러오는 중…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError || portfolios.length === 0) {
+    return (
+      <div className="flow-loading">
+        <div className="flow-loading__card">
+          <h1 className="t-h1">대결 불가</h1>
+          <p className="t-body">
+            {loadError || "먼저 랭크 받기에서 포트폴리오를 등록하세요."}
+          </p>
+          <Button onClick={() => nav("/app/rank")}>랭크 받으러 가기</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flow-battle-home">
-      <form
-        className="flow-battle-home__card stack"
-        onSubmit={(e) => {
-          e.preventDefault();
-          nav("/app/battle/fighting");
-        }}
-      >
+      <form className="flow-battle-home__card stack" onSubmit={(e) => void onSubmit(e)}>
         <h1 className="t-h1">친구와 대결</h1>
+        <label className="field">
+          <span className="field__label">내 포트폴리오</span>
+          <select
+            className="field__input"
+            value={portfolioId}
+            onChange={(e) => setPortfolioId(Number(e.target.value))}
+          >
+            {portfolios.map((p) => (
+              <option key={p.id} value={p.id}>
+                [{p.rank}] {p.field} — {p.repository}
+              </option>
+            ))}
+          </select>
+        </label>
         <Input
           label="상대 사용자 이름"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          value={opponent}
+          onChange={(e) => setOpponent(e.target.value)}
           required
         />
-        <Button type="submit">초대 후 대결</Button>
+        <Input
+          label="상대 포트폴리오 ID"
+          value={opponentPortfolioId}
+          onChange={(e) => setOpponentPortfolioId(e.target.value)}
+          placeholder="숫자 ID"
+          required
+        />
+        {error ? (
+          <p style={{ color: "var(--color-semantic-down)", fontSize: 13 }}>{error}</p>
+        ) : null}
+        <Button type="submit" disabled={submitting}>
+          {submitting ? "대결 중…" : "대결 시작"}
+        </Button>
         <Button type="button" variant="secondary" onClick={() => nav("/app/battle")}>
           뒤로
         </Button>
@@ -468,13 +720,26 @@ export function BattleFriendFlowPage() {
   );
 }
 
-/** 대결 분석 로딩 → 결과 */
 export function BattleFightingPage() {
   const nav = useNavigate();
+  const battle = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(LAST_BATTLE_KEY) ?? "null") as Battle | null;
+    } catch {
+      return null;
+    }
+  })();
+
   useEffect(() => {
-    const t = window.setTimeout(() => nav("/app/battle/result", { replace: true }), 1800);
+    const t = window.setTimeout(
+      () => nav("/app/battle/result", { replace: true }),
+      battle ? 1200 : 400,
+    );
     return () => window.clearTimeout(t);
-  }, [nav]);
+  }, [nav, battle]);
+
+  const me = battle?.username1 ?? "me";
+  const opp = battle?.username2 ?? "opponent";
 
   return (
     <div className="flow-loading">
@@ -483,13 +748,13 @@ export function BattleFightingPage() {
         <h1 className="t-h1">대결 분석 중</h1>
         <div className="row" style={{ justifyContent: "center", gap: 28, marginTop: 8 }}>
           <div>
-            <Avatar name="demo" size="lg" />
-            <p className="t-sm">demo</p>
+            <Avatar name={me} size="lg" />
+            <p className="t-sm">{me}</p>
           </div>
           <span className="muted">VS</span>
           <div>
-            <Avatar name="opponent" size="lg" />
-            <p className="t-sm">opponent</p>
+            <Avatar name={opp} size="lg" />
+            <p className="t-sm">{opp}</p>
           </div>
         </div>
       </div>
@@ -497,29 +762,65 @@ export function BattleFightingPage() {
   );
 }
 
-const COMPARE = [
-  { label: "프로젝트 완성도", a: 8, b: 5 },
-  { label: "코드 구조", a: 4, b: 5 },
-  { label: "기술 활용", a: 7, b: 6 },
-  { label: "문서화", a: 5, b: 5 },
-  { label: "테스트", a: 4, b: 7 },
-  { label: "배포", a: 8, b: 6 },
-  { label: "GitHub 활용", a: 9, b: 7 },
-];
-
-/** 위에 크게 승/패 → 스크롤로 분석 결과 */
 export function BattleOutcomePage() {
   const nav = useNavigate();
-  const r1 = COMPARE.reduce((s, r) => s + (r.a > r.b ? r.a - r.b : 0), 0);
-  const r2 = COMPARE.reduce((s, r) => s + (r.b > r.a ? r.b - r.a : 0), 0);
-  const won = r1 >= r2;
+  const [me, setMe] = useState("me");
+
+  useEffect(() => {
+    api.me()
+      .then((u) => setMe(u.username))
+      .catch(() => {
+        /* preview */
+      });
+  }, []);
+
+  const battle = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(LAST_BATTLE_KEY) ?? "null") as Battle | null;
+    } catch {
+      return null;
+    }
+  })();
+
+  if (!battle) {
+    return (
+      <div className="flow-outcome">
+        <section className="flow-outcome__banner is-lose">
+          <p className="flow-outcome__verdict">결과 없음</p>
+          <p className="t-body" style={{ color: "inherit", opacity: 0.85 }}>
+            대결 기록을 찾을 수 없습니다.
+          </p>
+          <Button onClick={() => nav("/app/battle")} style={{ marginTop: 16 }}>
+            대결로
+          </Button>
+        </section>
+      </div>
+    );
+  }
+
+  const iAmUser1 = battle.username1 === me;
+  const myName = iAmUser1 ? battle.username1 : battle.username2;
+  const oppName = iAmUser1 ? battle.username2 : battle.username1;
+  const myResult = iAmUser1 ? battle.result1 : battle.result2;
+  const oppResult = iAmUser1 ? battle.result2 : battle.result1;
+  const myScores = iAmUser1 ? battle.scores1 : battle.scores2;
+  const oppScores = iAmUser1 ? battle.scores2 : battle.scores1;
+  const myFeedback = iAmUser1 ? battle.feedback1 : battle.feedback2;
+  const draw = battle.winner == null;
+  const won = !draw && battle.winner === myName;
 
   return (
     <div className="flow-outcome">
-      <section className={`flow-outcome__banner ${won ? "is-win" : "is-lose"}`}>
-        <p className="flow-outcome__verdict">{won ? "승리" : "패배"}</p>
+      <section
+        className={`flow-outcome__banner ${draw ? "is-lose" : won ? "is-win" : "is-lose"}`}
+      >
+        <p className="flow-outcome__verdict">
+          {draw ? "무승부" : won ? "승리" : "패배"}
+        </p>
         <p className="t-body" style={{ color: "inherit", opacity: 0.85 }}>
-          {won ? (
+          {draw ? (
+            "랭크 점수 변동 없음"
+          ) : won ? (
             <>
               플레이어 점수 <span className="num">+8</span>
             </>
@@ -537,14 +838,14 @@ export function BattleOutcomePage() {
       <section className="flow-outcome__detail">
         <div className="grid-2">
           <article className="flow-panel stack" style={{ alignItems: "center" }}>
-            <Avatar name="demo" />
-            <p className="t-title">demo</p>
-            <p className="t-h1 num">{r1}</p>
+            <Avatar name={myName} />
+            <p className="t-title">{myName}</p>
+            <p className="t-h1 num">{myResult}</p>
           </article>
           <article className="flow-panel stack" style={{ alignItems: "center" }}>
-            <Avatar name="opponent" />
-            <p className="t-title">opponent</p>
-            <p className="t-h1 num">{r2}</p>
+            <Avatar name={oppName} />
+            <p className="t-title">{oppName}</p>
+            <p className="t-h1 num">{oppResult}</p>
           </article>
         </div>
 
@@ -556,35 +857,39 @@ export function BattleOutcomePage() {
             <thead>
               <tr>
                 <th>항목</th>
-                <th>demo</th>
-                <th>opponent</th>
+                <th>{myName}</th>
+                <th>{oppName}</th>
                 <th>우세</th>
               </tr>
             </thead>
             <tbody>
-              {COMPARE.map((r) => (
-                <tr key={r.label}>
-                  <td>{r.label}</td>
-                  <td className="num">{r.a}</td>
-                  <td className="num">{r.b}</td>
-                  <td>{r.a === r.b ? "동점" : r.a > r.b ? "demo" : "opponent"}</td>
-                </tr>
-              ))}
+              {BATTLE_SCORE_KEYS.map((r) => {
+                const a = myScores?.[r.key] ?? 0;
+                const b = oppScores?.[r.key] ?? 0;
+                return (
+                  <tr key={r.key}>
+                    <td>{r.label}</td>
+                    <td className="num">{a}</td>
+                    <td className="num">{b}</td>
+                    <td>{a === b ? "동점" : a > b ? myName : oppName}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
         <div className="grid-2" style={{ marginTop: 20 }}>
           <article className="flow-panel">
-            <h3 className="t-title">좋았던 점</h3>
+            <h3 className="t-title">피드백</h3>
             <p className="t-body" style={{ marginTop: 8 }}>
-              배포·GitHub 활용에서 앞섰습니다.
+              {myFeedback || "—"}
             </p>
           </article>
           <article className="flow-panel">
-            <h3 className="t-title">개선할 점</h3>
+            <h3 className="t-title">상대 피드백</h3>
             <p className="t-body" style={{ marginTop: 8 }}>
-              테스트 구성을 보강하면 좋습니다.
+              {(iAmUser1 ? battle.feedback2 : battle.feedback1) || "—"}
             </p>
           </article>
         </div>

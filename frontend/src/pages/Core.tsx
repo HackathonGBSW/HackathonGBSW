@@ -1,7 +1,7 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button, Input } from "../components/ui";
-import { api, DEMO, FIELDS } from "../lib/api";
+import { api, FIELDS, getAuthUsername, setAuthUsername } from "../lib/api";
 
 function AuthShell({ children }: { children: ReactNode }) {
   return (
@@ -33,12 +33,13 @@ export function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      await api.signin(username, password);
-      const profile = await api.getProfile(username).catch(() => null);
+      const me = await api.signin(username, password);
+      setAuthUsername(me.username);
+      const profile = await api.getProfile(me.username).catch(() => null);
       if (profile && !profile.main_field) nav("/onboarding");
       else nav("/app");
     } catch {
-      setError("로그인에 실패했습니다.");
+      setError("로그인에 실패했습니다. 아이디·비밀번호를 확인하세요.");
     } finally {
       setLoading(false);
     }
@@ -51,10 +52,7 @@ export function LoginPage() {
           Proof Arena
         </Link>
         <h1 className="t-h1">로그인</h1>
-        <p className="t-cap">GitHub 또는 계정으로 로그인</p>
-        <Button type="button" variant="secondary" onClick={() => nav("/onboarding")}>
-          GitHub로 로그인
-        </Button>
+        <p className="t-cap">계정으로 로그인</p>
         <Input
           label="아이디"
           name="username"
@@ -77,11 +75,14 @@ export function LoginPage() {
           {loading ? "로그인 중…" : "로그인"}
         </Button>
         <p className="t-cap" style={{ textAlign: "center" }}>
-          <Link to="/signup">회원가입</Link> · 비밀번호 찾기
+          <Link to="/signup">회원가입</Link>
         </p>
         <button
           type="button"
-          onClick={() => nav("/app")}
+          onClick={() => {
+            setAuthUsername(null);
+            nav("/app");
+          }}
           style={{
             border: 0,
             background: "none",
@@ -101,22 +102,27 @@ export function SignupPage() {
   const nav = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [githubUsername, setGithubUsername] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+    setLoading(true);
     try {
-      await api.signup(username, password);
-    } catch {
-      setError("가입 실패 — 이미 존재하는 아이디일 수 있습니다.");
-      return;
-    }
-    try {
-      await api.signin(username, password);
+      await api.signup(username, password, githubUsername.trim());
+      const me = await api.signin(username, password);
+      setAuthUsername(me.username);
       nav("/onboarding");
-    } catch {
-      nav("/login");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message || "가입에 실패했습니다."
+          : "가입 실패 — 이미 존재하는 아이디일 수 있습니다.",
+      );
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -127,9 +133,6 @@ export function SignupPage() {
           Proof Arena
         </Link>
         <h1 className="t-h1">회원가입</h1>
-        <Button type="button" variant="secondary" onClick={() => nav("/onboarding")}>
-          GitHub로 가입
-        </Button>
         <Input
           label="사용자 이름"
           name="username"
@@ -145,10 +148,20 @@ export function SignupPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        <Input
+          label="GitHub 사용자명"
+          name="github_username"
+          value={githubUsername}
+          onChange={(e) => setGithubUsername(e.target.value)}
+          placeholder="octocat"
+          required
+        />
         {error ? (
           <p style={{ color: "var(--color-semantic-down)", fontSize: 13 }}>{error}</p>
         ) : null}
-        <Button type="submit">다음</Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? "가입 중…" : "다음"}
+        </Button>
         <p className="t-cap" style={{ textAlign: "center" }}>
           이미 계정이 있나요? <Link to="/login">로그인</Link>
         </p>
@@ -159,21 +172,52 @@ export function SignupPage() {
 
 export function OnboardingPage() {
   const nav = useNavigate();
+  const [username, setUsername] = useState(getAuthUsername() ?? "");
   const [field, setField] = useState<string>(FIELDS[1]);
   const [github, setGithub] = useState("");
-  const [bio, setBio] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await api.me();
+        if (!cancelled) {
+          setUsername(me.username);
+          setAuthUsername(me.username);
+          const profile = await api.getProfile(me.username);
+          if (!cancelled && profile.github_username) {
+            setGithub(profile.github_username);
+          }
+          if (!cancelled && profile.main_field) {
+            setField(profile.main_field);
+          }
+        }
+      } catch {
+        /* preview / not logged in */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    setLoading(true);
+    setError("");
     try {
       await api.updateProfile({
         main_field: field,
-        github_url: github || undefined,
+        github_username: github.trim() || undefined,
       });
+      nav("/app");
     } catch {
-      /* demo */
+      setError("프로필 저장에 실패했습니다. 로그인 상태를 확인하세요.");
+    } finally {
+      setLoading(false);
     }
-    nav("/app");
   }
 
   return (
@@ -192,7 +236,7 @@ export function OnboardingPage() {
         <p className="t-cap">신규 사용자: 플레이어 점수 0 · 랭크 F</p>
         <div className="stack" style={{ gap: 4 }}>
           <span className="field__label">사용자 이름</span>
-          <p className="t-sm">{DEMO.username}</p>
+          <p className="t-sm">{username || "—"}</p>
         </div>
         <div className="stack" style={{ gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>주 분야</span>
@@ -210,21 +254,17 @@ export function OnboardingPage() {
           </div>
         </div>
         <Input
-          label="GitHub URL"
+          label="GitHub 사용자명"
           value={github}
           onChange={(e) => setGithub(e.target.value)}
-          placeholder="https://github.com/user"
+          placeholder="octocat"
         />
-        <label className="field">
-          <span className="field__label">자기소개</span>
-          <textarea
-            className="field__input"
-            style={{ height: "auto", minHeight: 96, resize: "vertical" }}
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-          />
-        </label>
-        <Button type="submit">저장하고 시작</Button>
+        {error ? (
+          <p style={{ color: "var(--color-semantic-down)", fontSize: 13 }}>{error}</p>
+        ) : null}
+        <Button type="submit" disabled={loading}>
+          {loading ? "저장 중…" : "저장하고 시작"}
+        </Button>
       </form>
     </div>
   );
