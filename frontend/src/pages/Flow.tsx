@@ -22,7 +22,6 @@ import {
   type Rank,
 } from "../lib/api";
 import profileAvatar from "../assets/profile-card-avatar.jpg";
-import profileBanner from "../assets/profile-card-banner.jpg";
 import "./flow.css";
 
 const LAST_BATTLE_KEY = "last-battle";
@@ -128,7 +127,6 @@ export function MainPage() {
         ) : null}
         <article className="profile-card">
           <div className="profile-card__banner">
-            <img src={profileBanner} alt="" />
             <div className="profile-card__rank">
               <span>PLAYER RANK</span>
               <strong>{playerTier}</strong>
@@ -267,7 +265,7 @@ export function RankPage() {
       <div className="flow-rank__shape">
         <div className="flow-rank__inner">
           <p className="badge">Rank</p>
-          <h1 className="t-h1" style={{ marginTop: 12 }}>
+          <h1 className="t-h1" style={{ marginTop: 32 }}>
             랭크 받기
           </h1>
           <p className="t-body" style={{ marginTop: 8 }}>
