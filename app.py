@@ -678,6 +678,12 @@ def battle_detail(battle_id):
 @app.get("/my")
 def my():
     if session and "username" in session:
+        # 세션은 유효해도 해당 유저가 이미 삭제됐을 수 있다(DB 초기화 등) —
+        # 그 경우 조용히 세션만 남겨두면 프론트가 "로그인은 됐는데 프로필은
+        # 없는" 애매한 상태에 빠진다. 여기서 확실히 정리해서 401을 준다.
+        if not db.session.get(User, session["username"]):
+            session.clear()
+            return unauthorized()
         return ok_data({"username": session["username"]})
     return unauthorized()
 

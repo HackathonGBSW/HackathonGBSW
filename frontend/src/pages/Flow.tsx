@@ -81,7 +81,10 @@ export function MainPage() {
 
   const u = profile ?? DEMO;
   const isDemo = !profile;
-  const radarScores = latestScores ?? DEMO_RADAR_SCORES;
+  // Demo/preview mode (not logged in) still shows sample scores so visitors
+  // can see what the feature looks like. A real, logged-in user with zero
+  // submitted portfolios gets an empty state instead of fabricated numbers.
+  const radarScores = isDemo ? DEMO_RADAR_SCORES : latestScores;
   const githubHref = githubProfileUrl(u.github_username);
   const categoryChips = [
     u.main_field ?? FIELDS[0],
@@ -167,11 +170,20 @@ export function MainPage() {
                 <strong>7개 항목 분석</strong>
                 <p>대결 기준으로 쓰이는 핵심 항목을 한 번에 비교합니다.</p>
               </div>
-              <ScoreRadar
-                scores={radarScores}
-                size={260}
-                className="profile-card__radar"
-              />
+              {radarScores ? (
+                <ScoreRadar
+                  scores={radarScores}
+                  size={260}
+                  className="profile-card__radar"
+                />
+              ) : (
+                <div className="profile-card__radar-empty">
+                  <p>아직 제출한 포트폴리오가 없습니다.</p>
+                  <Link to="/app/rank" className="btn btn--primary btn--md">
+                    랭크 받으러 가기
+                  </Link>
+                </div>
+              )}
             </section>
 
             <dl className="profile-card__stats">
