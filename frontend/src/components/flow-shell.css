@@ -28,7 +28,27 @@
   color: var(--color-ink);
 }
 
+.flow-shell__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .flow-shell__me {
   display: inline-flex;
   text-decoration: none;
+}
+
+.flow-shell__logout {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.flow-shell__logout:hover {
+  color: var(--color-ink);
 }

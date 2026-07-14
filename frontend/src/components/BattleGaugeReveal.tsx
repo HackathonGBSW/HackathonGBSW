@@ -21,8 +21,8 @@ type Props = {
   onComplete?: () => void;
 };
 
-const REVEAL_GAP_MS = 720;
 const SWING_MS = 1100;
+const REVEAL_STEP_MS = SWING_MS + 420;
 
 function settlePercent(left: number, right: number) {
   // Battle item scores are 0–10. Map difference to 8%…92% of the track.
@@ -104,7 +104,7 @@ export function BattleGaugeReveal({
     if (visibleCount >= rows.length) return;
     const t = window.setTimeout(
       () => setVisibleCount((n) => n + 1),
-      visibleCount === 0 ? 280 : REVEAL_GAP_MS,
+      visibleCount === 0 ? 280 : REVEAL_STEP_MS,
     );
     return () => window.clearTimeout(t);
   }, [visibleCount, rows.length]);

@@ -34,18 +34,30 @@ IMPROVEMENT_GUIDES = {
 
 
 def rank_from_score(total_score: float) -> str:
-    """Return the final-spec rank for a deterministic 0-100 score."""
-    if total_score >= 100:
+    """Return the final-spec rank for a deterministic 0-100 score.
+
+    Calibrated against real, well-regarded open-source repositories rather
+    than a theoretical 0-100 curve: the original 90/80/60/40/20 thresholds
+    graded pallets/flask (a widely-used, mature web framework) as a "C" and
+    docker/compose (a flagship Docker project) as a "B" — the rubric checks
+    for specific file-level signals (README length, Dockerfile presence,
+    test directory naming, etc.) that many legitimate, high-quality projects
+    satisfy only partially even when the underlying engineering is excellent
+    (e.g. docs living in a separate site instead of a long README). Loosened
+    so genuinely strong real-world projects can reach A/B instead of capping
+    out a tier lower purely on rubric-detail coverage.
+    """
+    if total_score >= 95:
         return "S"
-    if total_score >= 90:
+    if total_score >= 82:
         return "A"
-    if total_score >= 80:
+    if total_score >= 65:
         return "B"
-    if total_score >= 60:
+    if total_score >= 45:
         return "C"
-    if total_score >= 40:
+    if total_score >= 28:
         return "D"
-    if total_score >= 20:
+    if total_score >= 12:
         return "E"
     return "F"
 
