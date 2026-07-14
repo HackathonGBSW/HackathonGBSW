@@ -23,6 +23,7 @@ export default defineConfig({
       "/profile": { target: backend, bypass: bypassPageNavigation },
       "/portfolios": { target: backend, changeOrigin: true },
       "/battles": { target: backend, changeOrigin: true },
+      "/leaderboard": { target: backend, changeOrigin: true },
     },
   },
 });

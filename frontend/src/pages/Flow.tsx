@@ -116,7 +116,7 @@ export function MainPage() {
         <article className="profile-card">
           <div className="profile-card__banner">
             <div className="profile-card__rank">
-              <span>PLAYER RANK</span>
+              <span className="profile-card__rank-caption">PLAYER RANK</span>
               <strong>
                 <PlayerTierLabel rank={u.player_rank} />
               </strong>

@@ -36,55 +36,102 @@ def rank_for_score(score: float) -> str:
 # up to +18, battles grant +8/-3 plus a streak bonus), so — unlike the 0-100
 # analysis score — it needs an open-ended ladder rather than a 7-band scale.
 # Bronze/Silver/Gold/Platinum/Diamond each carry 4 divisions (4 lowest -> 1
-# highest); the top four bands are flat, division-less score bands, matching
-# how LoL-style ladders stop subdividing once a ladder gets to its top end.
-PLAYER_TIERS = [
-    ("bronze", 4, "브론즈 4", 0),
-    ("bronze", 3, "브론즈 3", 20),
-    ("bronze", 2, "브론즈 2", 40),
-    ("bronze", 1, "브론즈 1", 60),
-    ("silver", 4, "실버 4", 80),
-    ("silver", 3, "실버 3", 100),
-    ("silver", 2, "실버 2", 120),
-    ("silver", 1, "실버 1", 140),
-    ("gold", 4, "골드 4", 160),
-    ("gold", 3, "골드 3", 180),
-    ("gold", 2, "골드 2", 200),
-    ("gold", 1, "골드 1", 220),
-    ("platinum", 4, "플래티넘 4", 240),
-    ("platinum", 3, "플래티넘 3", 260),
-    ("platinum", 2, "플래티넘 2", 280),
-    ("platinum", 1, "플래티넘 1", 300),
-    ("diamond", 4, "다이아몬드 4", 320),
-    ("diamond", 3, "다이아몬드 3", 340),
-    ("diamond", 2, "다이아몬드 2", 360),
-    ("diamond", 1, "다이아몬드 1", 380),
-    ("newbie", None, "신입", 400),
-    ("junior", None, "주니어", 480),
-    ("middle", None, "미들", 560),
-    ("senior", None, "시니어", 640),
+# highest); per-division spacing widens going up the ladder (LoL-style).
+FIXED_PLAYER_TIERS = [
+    ("bronze", 4, "Bronze 4", 0),
+    ("bronze", 3, "Bronze 3", 30),
+    ("bronze", 2, "Bronze 2", 60),
+    ("bronze", 1, "Bronze 1", 90),
+    ("silver", 4, "Silver 4", 120),
+    ("silver", 3, "Silver 3", 160),
+    ("silver", 2, "Silver 2", 200),
+    ("silver", 1, "Silver 1", 240),
+    ("gold", 4, "Gold 4", 280),
+    ("gold", 3, "Gold 3", 340),
+    ("gold", 2, "Gold 2", 400),
+    ("gold", 1, "Gold 1", 460),
+    ("platinum", 4, "Platinum 4", 520),
+    ("platinum", 3, "Platinum 3", 590),
+    ("platinum", 2, "Platinum 2", 660),
+    ("platinum", 1, "Platinum 1", 730),
+    ("diamond", 4, "Diamond 4", 800),
+    ("diamond", 3, "Diamond 3", 900),
+    ("diamond", 2, "Diamond 2", 1000),
+    ("diamond", 1, "Diamond 1", 1100),
+]
+_DIAMOND_1_INDEX = len(FIXED_PLAYER_TIERS) - 1
+
+# Junior/Middle/Senior sit above Diamond 1 as flat, division-less bands and
+# are gated by BOTH a score floor and a leaderboard rank_position cap (top
+# 1000/800/300). Score alone isn't enough: player_rank_score only ever goes
+# up (net of losses), so a pure score threshold would eventually let everyone
+# cross it and pile into Senior. Capping by standing keeps the elite bands
+# exclusive regardless of how high the whole population's scores climb —
+# mirrors LoL's Master/Grandmaster/Challenger, where clearing the LP bar
+# without a free slot just holds you at the top of Diamond.
+JUNIOR_THRESHOLD = 1200
+MIDDLE_THRESHOLD = JUNIOR_THRESHOLD + 1000
+SENIOR_THRESHOLD = MIDDLE_THRESHOLD + 1500
+
+ELITE_TIERS = [
+    ("junior", "Junior", JUNIOR_THRESHOLD, 1000),
+    ("middle", "Middle", MIDDLE_THRESHOLD, 800),
+    ("senior", "Senior", SENIOR_THRESHOLD, 300),
 ]
 
 
-def player_tier_for_score(score: float) -> dict:
-    """Map a cumulative player_rank_score to its player-ladder tier."""
+def player_tier_for_score(score: float, rank_position: int) -> dict:
+    """Map a cumulative player_rank_score to its player-ladder tier.
+
+    rank_position is the player's 1-indexed standing among ALL players when
+    sorted by player_rank_score descending (dense-ranked: ties share a
+    position). It only matters once score clears the Junior floor — Bronze
+    through Diamond are decided by score alone.
+    """
     score = max(0.0, float(score))
+
+    if score >= JUNIOR_THRESHOLD:
+        for tier_index in range(len(ELITE_TIERS) - 1, -1, -1):
+            material, label, threshold, rank_cap = ELITE_TIERS[tier_index]
+            if score >= threshold and rank_position <= rank_cap:
+                has_next = tier_index + 1 < len(ELITE_TIERS)
+                next_label = ELITE_TIERS[tier_index + 1][1] if has_next else None
+                next_threshold = ELITE_TIERS[tier_index + 1][2] if has_next else None
+                progress_percent = (
+                    100.0
+                    if not has_next
+                    else round(min(100.0, (score - threshold) / (next_threshold - threshold) * 100), 1)
+                )
+                return {
+                    "material": material,
+                    "division": None,
+                    "label": label,
+                    "index": _DIAMOND_1_INDEX + 1 + tier_index,
+                    "next_label": next_label,
+                    "progress_percent": progress_percent,
+                }
+        # Score clears Junior but rank_position exceeds even the widest
+        # (1000-slot) cap: held at Diamond 1 until standing improves.
+
     index = 0
-    for i, (_material, _division, _label, threshold) in enumerate(PLAYER_TIERS):
+    for i, (_material, _division, _label, threshold) in enumerate(FIXED_PLAYER_TIERS):
         if score >= threshold:
             index = i
         else:
             break
 
-    material, division, label, threshold = PLAYER_TIERS[index]
-    has_next = index + 1 < len(PLAYER_TIERS)
-    next_label = PLAYER_TIERS[index + 1][2] if has_next else None
-    next_threshold = PLAYER_TIERS[index + 1][3] if has_next else None
-    progress_percent = (
-        100.0
-        if not has_next
-        else round(min(100.0, (score - threshold) / (next_threshold - threshold) * 100), 1)
-    )
+    material, division, label, threshold = FIXED_PLAYER_TIERS[index]
+    if index == _DIAMOND_1_INDEX:
+        next_label = "Junior"
+        progress_percent = (
+            100.0
+            if score >= JUNIOR_THRESHOLD
+            else round(min(100.0, (score - threshold) / (JUNIOR_THRESHOLD - threshold) * 100), 1)
+        )
+    else:
+        next_label = FIXED_PLAYER_TIERS[index + 1][2]
+        next_threshold = FIXED_PLAYER_TIERS[index + 1][3]
+        progress_percent = round(min(100.0, (score - threshold) / (next_threshold - threshold) * 100), 1)
 
     return {
         "material": material,

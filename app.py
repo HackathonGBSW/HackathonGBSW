@@ -252,6 +252,10 @@ def _match_queue_to_dict(q):
         "created_at": q.created_at.isoformat() if q.created_at else None,
     }
 
+def _player_rank_position(score):
+    """1-indexed dense rank among all players by player_rank_score (ties share a position)."""
+    return User.query.filter(User.player_rank_score > score).count() + 1
+
 def _profile_to_dict(user):
     total_battles = user.win + user.lose
     win_rate = (user.win / total_battles) if total_battles > 0 else None
@@ -267,7 +271,9 @@ def _profile_to_dict(user):
         "username": user.username,
         "github_username": user.github_username,
         "main_field": user.main_field,
-        "player_rank": player_tier_for_score(user.player_rank_score),
+        "player_rank": player_tier_for_score(
+            user.player_rank_score, _player_rank_position(user.player_rank_score)
+        ),
         "player_rank_score": user.player_rank_score,
         "battle_win": user.win,
         "battle_lose": user.lose,
@@ -604,7 +610,9 @@ def battle_match():
         db.session.add(my_entry)
 
     me = db.get_or_404(User, my_username)
-    my_tier_index = player_tier_for_score(me.player_rank_score)["index"]
+    my_tier_index = player_tier_for_score(
+        me.player_rank_score, _player_rank_position(me.player_rank_score)
+    )["index"]
 
     candidates = MatchQueue.query.filter(
         MatchQueue.field == field,
@@ -616,7 +624,9 @@ def battle_match():
     for candidate in candidates:
         opponent = User.query.get(candidate.username)
         if opponent:
-            opponent_tier_index = player_tier_for_score(opponent.player_rank_score)["index"]
+            opponent_tier_index = player_tier_for_score(
+                opponent.player_rank_score, _player_rank_position(opponent.player_rank_score)
+            )["index"]
             if player_tier_diff(my_tier_index, opponent_tier_index) <= 1:
                 opponent_entry = candidate
                 break
@@ -668,23 +678,31 @@ LEADERBOARD_LIMIT = 100
 
 @app.get("/leaderboard")
 def leaderboard():
+    """field는 표시 필터일 뿐, 티어 판정에 쓰이는 순위(position)는 항상 전체 유저
+    기준 전역 순위다 — 그래야 필드로 필터링해도 상위 1000/800/300명 제한이
+    실제 전체 순위와 어긋나지 않는다."""
     field = request.args.get("field")
-    query = User.query
-    if field:
-        query = query.filter_by(main_field=field)
-    users = query.order_by(User.player_rank_score.desc()).limit(LEADERBOARD_LIMIT).all()
-    return ok_data([
-        {
+    all_users = User.query.order_by(User.player_rank_score.desc()).all()
+
+    rows = []
+    position = 1
+    for i, u in enumerate(all_users):
+        if i > 0 and u.player_rank_score != all_users[i - 1].player_rank_score:
+            position = i + 1
+        if field and u.main_field != field:
+            continue
+        rows.append({
             "username": u.username,
             "main_field": u.main_field,
-            "player_rank": player_tier_for_score(u.player_rank_score),
+            "player_rank": player_tier_for_score(u.player_rank_score, position),
             "player_rank_score": u.player_rank_score,
             "battle_win": u.win,
             "battle_lose": u.lose,
             "win_streak": u.win_streak,
-        }
-        for u in users
-    ])
+        })
+        if len(rows) >= LEADERBOARD_LIMIT:
+            break
+    return ok_data(rows)
 
 if __name__ == "__main__":
     # macOS AirPlay Receiver occupies :5000 — use 5001 for local Vite proxy.

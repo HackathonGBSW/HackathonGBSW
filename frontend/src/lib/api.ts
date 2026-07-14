@@ -115,15 +115,16 @@ export const RANK_SCORE_GAIN: Record<Rank, number> = {
   F: 0,
 };
 
-// Player-ladder tier (cumulative player_rank_score -> 24-step ladder).
-// See llm_analyzer.PLAYER_TIERS / SPEC.md §3 for the backend threshold table.
+// Player-ladder tier (cumulative player_rank_score -> 23-step ladder).
+// See llm_analyzer.FIXED_PLAYER_TIERS/ELITE_TIERS / SPEC.md §3 for the
+// backend threshold table. Junior/Middle/Senior are also gated by the
+// player's leaderboard rank_position (top 1000/800/300), not score alone.
 export type PlayerTierMaterial =
   | "bronze"
   | "silver"
   | "gold"
   | "platinum"
   | "diamond"
-  | "newbie"
   | "junior"
   | "middle"
   | "senior";
@@ -144,7 +145,6 @@ export const PLAYER_TIER_GRADIENT: Record<PlayerTierMaterial, string> = {
   gold: "linear-gradient(90deg, #b8860b 0%, #ffe08a 50%, #b8860b 100%)",
   platinum: "linear-gradient(90deg, #3fa9a3 0%, #b9fff2 50%, #3fa9a3 100%)",
   diamond: "linear-gradient(90deg, #4f7cff 0%, #d6ecff 50%, #4f7cff 100%)",
-  newbie: "linear-gradient(90deg, #6b7280 0%, #d1d5db 100%)",
   junior: "linear-gradient(90deg, #2f80ed 0%, #a0d8ff 100%)",
   middle: "linear-gradient(90deg, #7b2ff7 0%, #f9a8ff 100%)",
   senior: "linear-gradient(90deg, #ff5f6d 0%, #ffc371 25%, #47cf73 50%, #4f7cff 75%, #a855f7 100%)",
@@ -386,12 +386,12 @@ export const DEMO: Profile & { bio: string } = {
   player_rank: {
     material: "gold",
     division: 2,
-    label: "골드 2",
+    label: "Gold 2",
     index: 10,
-    next_label: "골드 1",
+    next_label: "Gold 1",
     progress_percent: 45.0,
   },
-  player_rank_score: 209,
+  player_rank_score: 427,
   battle_win: 41,
   battle_lose: 22,
   battle_win_rate: 0.651,
