@@ -4,7 +4,6 @@ import { BattleGaugeReveal } from "../components/BattleGaugeReveal";
 import { ScoreRadar } from "../components/ScoreRadar";
 import { Button, Input, PlayerTierLabel, RankPill } from "../components/ui";
 import {
-  DEMO,
   FIELDS,
   PORTFOLIO_FIELDS,
   SCORE_ITEMS,
@@ -30,16 +29,6 @@ const PENDING_ANALYZE_KEY = "pending-analyze";
 const LAST_ANALYZE_KEY = "last-analyze";
 const PENDING_BATTLE_KEY = "pending-battle";
 
-const DEMO_RADAR_SCORES: PortfolioScores = {
-  completeness: 24,
-  structure: 7,
-  tech: 11,
-  docs: 3,
-  test: 3,
-  deploy: 10,
-  github: 15,
-};
-
 function formatWinRate(rate: number | null, wins: number, losses: number) {
   if (rate == null || wins + losses === 0) return `기록 없음 (0승 0패)`;
   return `${(rate * 100).toFixed(1)}% (${wins}승 ${losses}패)`;
@@ -49,8 +38,8 @@ function formatWinRate(rate: number | null, wins: number, losses: number) {
 export function MainPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [latestScores, setLatestScores] = useState<PortfolioScores | null>(null);
-  const [loading, setLoading] = useState(true);
   const [avatarFailed, setAvatarFailed] = useState(false);
+  const nav = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
@@ -66,33 +55,35 @@ export function MainPage() {
           setLatestScores(latestPortfolio ? toPortfolioDetail(latestPortfolio).scores : null);
         }
       } catch {
-        if (!cancelled) {
-          setProfile(null);
-          setLatestScores(null);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+        // 로그인되어 있지 않으면(또는 세션이 가리키는 계정이 더 이상 없으면)
+        // 미리보기 화면을 보여주는 대신 로그인 페이지로 보낸다.
+        if (!cancelled) nav("/login", { replace: true });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [nav]);
 
-  const u = profile ?? DEMO;
-  const isDemo = !profile;
-  // Demo/preview mode (not logged in) still shows sample scores so visitors
-  // can see what the feature looks like. A real, logged-in user with zero
-  // submitted portfolios gets an empty state instead of fabricated numbers.
-  const radarScores = isDemo ? DEMO_RADAR_SCORES : latestScores;
+  if (!profile) {
+    return (
+      <div className="flow-main">
+        <section className="flow-hero" aria-label="메인 프로필">
+          <p className="t-cap" style={{ padding: 24 }}>
+            프로필 불러오는 중…
+          </p>
+        </section>
+      </div>
+    );
+  }
+
+  const u = profile;
+  const radarScores = latestScores;
   const githubHref = githubProfileUrl(u.github_username);
-  const categoryChips = [
-    u.main_field ?? FIELDS[0],
-    ...FIELDS.filter((field) => field !== u.main_field),
-  ].slice(0, 3);
+  const categoryChips = u.main_fields;
   const profileStats = [
     { label: "사용자 이름", value: u.username },
-    { label: "주분야", value: u.main_field ?? "미선택" },
+    { label: "주분야", value: u.main_fields.length ? u.main_fields.join(", ") : "미선택" },
     { label: "플레이어 랭크", value: u.player_rank.label },
     {
       label: "대결 승률",
@@ -106,16 +97,6 @@ export function MainPage() {
   return (
     <div className="flow-main">
       <section className="flow-hero" aria-label="메인 프로필">
-        {loading ? (
-          <p className="t-cap" style={{ padding: 24 }}>
-            프로필 불러오는 중…
-          </p>
-        ) : null}
-        {isDemo && !loading ? (
-          <p className="t-cap" style={{ padding: "0 24px 12px" }}>
-            미리보기 모드 — 로그인하면 실제 프로필이 표시됩니다.
-          </p>
-        ) : null}
         <article className="profile-card">
           <div className="profile-card__banner">
             <div className="profile-card__rank">
@@ -146,19 +127,11 @@ export function MainPage() {
               </div>
             </div>
 
-            <p className="profile-card__intro">
-              {isDemo ? DEMO.bio : "근거 기반 포트폴리오로 실력을 증명합니다."}
-            </p>
+            <p className="profile-card__intro">근거 기반 포트폴리오로 실력을 증명합니다.</p>
 
             <div className="profile-card__chips" aria-label="기술 및 직무 카테고리">
               {categoryChips.map((field, index) => (
-                <span
-                  key={field}
-                  className={`profile-card__chip ${
-                    field === u.main_field ? "is-primary" : ""
-                  }`}
-                  data-tone={index % 4}
-                >
+                <span key={field} className="profile-card__chip" data-tone={index % 4}>
                   # {field}
                 </span>
               ))}
@@ -1107,7 +1080,7 @@ export function RankingPage() {
                     <tr key={entry.username}>
                       <td className="num">{index + 1}</td>
                       <td>{entry.username}</td>
-                      <td>{entry.main_field ?? "—"}</td>
+                      <td>{entry.main_fields.length ? entry.main_fields.join(", ") : "—"}</td>
                       <td>
                         <PlayerTierLabel rank={entry.player_rank} />
                       </td>

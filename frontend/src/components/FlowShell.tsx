@@ -6,8 +6,9 @@ import "./flow-shell.css";
 
 export function FlowShell() {
   const nav = useNavigate();
-  const [username, setUsername] = useState("demo");
+  const [username, setUsername] = useState("");
   const [githubUsername, setGithubUsername] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -18,15 +19,18 @@ export function FlowShell() {
         if (!cancelled) {
           setUsername(profile.username);
           setGithubUsername(profile.github_username);
+          setAuthChecked(true);
         }
       } catch {
-        /* preview / not logged in */
+        // 로그인 안 됐거나(또는 세션이 가리키는 계정이 삭제됐거나) — 어느 쪽이든
+        // /app 하위 페이지를 보여주지 않고 로그인 페이지로 보낸다.
+        if (!cancelled) nav("/login", { replace: true });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [nav]);
 
   async function handleLogout() {
     try {
@@ -36,6 +40,16 @@ export function FlowShell() {
     }
     setAuthUsername(null);
     nav("/login");
+  }
+
+  if (!authChecked) {
+    return (
+      <div className="flow-loading">
+        <div className="flow-loading__card">
+          <div className="flow-loading__spin" aria-hidden />
+        </div>
+      </div>
+    );
   }
 
   return (

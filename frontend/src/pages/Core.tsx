@@ -36,7 +36,7 @@ export function LoginPage() {
       const me = await api.signin(username, password);
       setAuthUsername(me.username);
       const profile = await api.getProfile(me.username).catch(() => null);
-      if (profile && !profile.main_field) nav("/onboarding");
+      if (profile && profile.main_fields.length === 0) nav("/onboarding");
       else nav("/app");
     } catch {
       setError("로그인에 실패했습니다. 아이디·비밀번호를 확인하세요.");
@@ -159,7 +159,7 @@ export function SignupPage() {
 export function OnboardingPage() {
   const nav = useNavigate();
   const [username, setUsername] = useState(getAuthUsername() ?? "");
-  const [field, setField] = useState<string>(FIELDS[1]);
+  const [fields, setFields] = useState<string[]>([]);
   const [github, setGithub] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -176,8 +176,8 @@ export function OnboardingPage() {
           if (!cancelled && profile.github_username) {
             setGithub(profile.github_username);
           }
-          if (!cancelled && profile.main_field) {
-            setField(profile.main_field);
+          if (!cancelled && profile.main_fields.length) {
+            setFields(profile.main_fields);
           }
         }
       } catch {
@@ -189,13 +189,23 @@ export function OnboardingPage() {
     };
   }, []);
 
+  function toggleField(f: string) {
+    setFields((prev) =>
+      prev.includes(f) ? prev.filter((item) => item !== f) : [...prev, f],
+    );
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (fields.length === 0) {
+      setError("주 분야를 하나 이상 선택하세요.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
       await api.updateProfile({
-        main_field: field,
+        main_fields: fields,
         github_username: github.trim() || undefined,
       });
       nav("/app");
@@ -225,14 +235,14 @@ export function OnboardingPage() {
           <p className="t-sm">{username || "—"}</p>
         </div>
         <div className="stack" style={{ gap: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 600 }}>주 분야</span>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>주 분야 (복수 선택 가능)</span>
           <div className="chips">
             {FIELDS.map((f) => (
               <button
                 key={f}
                 type="button"
-                className={`chip ${field === f ? "is-on" : ""}`}
-                onClick={() => setField(f)}
+                className={`chip ${fields.includes(f) ? "is-on" : ""}`}
+                onClick={() => toggleField(f)}
               >
                 {f}
               </button>

@@ -45,7 +45,7 @@ class User(db.Model):
     username = db.Column(db.String(30), primary_key=True)
     password = db.Column(db.String(255), nullable=False)
     github_username = db.Column(db.String(50), nullable=False)
-    main_field = db.Column(db.String(50))
+    main_fields = db.Column(db.JSON, nullable=False, default=list)
     win = db.Column(db.Integer, nullable=False, default=0)
     lose = db.Column(db.Integer, nullable=False, default=0)
     player_rank_score = db.Column(db.Integer, nullable=False, default=0)
@@ -271,7 +271,7 @@ def _profile_to_dict(user):
     return {
         "username": user.username,
         "github_username": user.github_username,
-        "main_field": user.main_field,
+        "main_fields": user.main_fields or [],
         "player_rank": player_tier_for_score(
             user.player_rank_score, _player_rank_position(user.player_rank_score)
         ),
@@ -411,8 +411,11 @@ def profile_update():
         return unauthorized()
     data = request.get_json(silent=True) or request.form
     user = db.get_or_404(User, session["username"])
-    if data.get("main_field"):
-        user.main_field = data["main_field"]
+    if "main_fields" in data:
+        fields = data["main_fields"]
+        if not isinstance(fields, list) or not all(isinstance(f, str) for f in fields):
+            return bad_request()
+        user.main_fields = fields
     if data.get("github_username"):
         user.github_username = data["github_username"]
     db.session.commit()
@@ -702,11 +705,11 @@ def leaderboard():
     for i, u in enumerate(all_users):
         if i > 0 and u.player_rank_score != all_users[i - 1].player_rank_score:
             position = i + 1
-        if field and u.main_field != field:
+        if field and field not in (u.main_fields or []):
             continue
         rows.append({
             "username": u.username,
-            "main_field": u.main_field,
+            "main_fields": u.main_fields or [],
             "player_rank": player_tier_for_score(u.player_rank_score, position),
             "player_rank_score": u.player_rank_score,
             "battle_win": u.win,

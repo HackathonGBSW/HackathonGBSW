@@ -153,7 +153,7 @@ export const PLAYER_TIER_GRADIENT: Record<PlayerTierMaterial, string> = {
 export interface Profile {
   username: string;
   github_username: string;
-  main_field: string | null;
+  main_fields: string[];
   player_rank: PlayerRank;
   player_rank_score: number;
   battle_win: number;
@@ -166,7 +166,7 @@ export interface Profile {
 
 export interface LeaderboardEntry {
   username: string;
-  main_field: string | null;
+  main_fields: string[];
   player_rank: PlayerRank;
   player_rank_score: number;
   battle_win: number;
@@ -297,7 +297,7 @@ export const api = {
   me: () => request<{ username: string }>("/my"),
   getProfile: (username: string) =>
     request<Profile>(`/profile/${encodeURIComponent(username)}`),
-  updateProfile: (data: { main_field?: string; github_username?: string }) =>
+  updateProfile: (data: { main_fields?: string[]; github_username?: string }) =>
     request<Profile>("/profile", { method: "PATCH", body: data }),
   listPortfolios: () => request<Portfolio[]>("/portfolios"),
   /** Public lookup of another user's portfolios, for the friend-battle opponent picker. */
@@ -379,24 +379,3 @@ export const BATTLE_SCORE_KEYS = [
   { key: "github", label: "GitHub 활용" },
 ] as const;
 
-export const DEMO: Profile & { bio: string } = {
-  username: "demo",
-  github_username: "demo",
-  main_field: "백엔드",
-  player_rank: {
-    material: "gold",
-    division: 2,
-    label: "Gold 2",
-    index: 10,
-    next_label: "Gold 1",
-    progress_percent: 45.0,
-  },
-  player_rank_score: 427,
-  battle_win: 41,
-  battle_lose: 22,
-  battle_win_rate: 0.651,
-  win_streak: 2,
-  portfolio_best_rank: "A",
-  portfolio_avg_rank: "B",
-  bio: "근거 기반 포트폴리오로 실력을 증명합니다.",
-};
