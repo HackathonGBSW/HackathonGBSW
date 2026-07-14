@@ -1,4 +1,5 @@
 import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
+import { PLAYER_TIER_GRADIENT, type PlayerRank } from "../lib/api";
 import "./ui.css";
 
 type Variant = "primary" | "secondary" | "dark" | "outline" | "text" | "danger";
@@ -84,6 +85,15 @@ export function RankPill({ rank, score }: { rank: string; score?: number }) {
     <span className="rank-pill">
       <strong>{rank}</strong>
       {score !== undefined ? <span className="num muted">{score}</span> : null}
+    </span>
+  );
+}
+
+/** Mineral-gradient player tier label, shared by the main profile card and the leaderboard. */
+export function PlayerTierLabel({ rank }: { rank: PlayerRank }) {
+  return (
+    <span className="tier-label" style={{ backgroundImage: PLAYER_TIER_GRADIENT[rank.material] }}>
+      {rank.label}
     </span>
   );
 }

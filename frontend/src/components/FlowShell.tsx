@@ -45,6 +45,9 @@ export function FlowShell() {
           Proof Arena
         </Link>
         <div className="flow-shell__actions">
+          <Link to="/app/ranking" className="flow-shell__logout">
+            랭킹
+          </Link>
           <Link to="/app" className="flow-shell__me">
             <Avatar name={username} githubUsername={githubUsername} size="sm" />
           </Link>
