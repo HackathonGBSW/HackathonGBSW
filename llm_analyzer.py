@@ -24,7 +24,6 @@ class LLMError(Exception):
     """Backward-compatible LLM error consumed by app.py."""
 
 
-RANK_ORDER = ["F", "E", "D", "C", "B", "A", "S"]
 RANK_SCORE_GAIN = {"S": 18, "A": 13, "B": 8, "C": 5, "D": 2, "E": 1, "F": 0}
 
 
@@ -32,8 +31,73 @@ def rank_for_score(score: float) -> str:
     return rank_from_score(float(score))
 
 
-def rank_tier_diff(rank_a: str, rank_b: str) -> int:
-    return abs(RANK_ORDER.index(rank_a) - RANK_ORDER.index(rank_b))
+# Player-ladder tiers, distinct from the S~F portfolio analysis grade above.
+# player_rank_score is cumulative and unbounded (portfolio submissions grant
+# up to +18, battles grant +8/-3 plus a streak bonus), so — unlike the 0-100
+# analysis score — it needs an open-ended ladder rather than a 7-band scale.
+# Bronze/Silver/Gold/Platinum/Diamond each carry 4 divisions (4 lowest -> 1
+# highest); the top four bands are flat, division-less score bands, matching
+# how LoL-style ladders stop subdividing once a ladder gets to its top end.
+PLAYER_TIERS = [
+    ("bronze", 4, "브론즈 4", 0),
+    ("bronze", 3, "브론즈 3", 20),
+    ("bronze", 2, "브론즈 2", 40),
+    ("bronze", 1, "브론즈 1", 60),
+    ("silver", 4, "실버 4", 80),
+    ("silver", 3, "실버 3", 100),
+    ("silver", 2, "실버 2", 120),
+    ("silver", 1, "실버 1", 140),
+    ("gold", 4, "골드 4", 160),
+    ("gold", 3, "골드 3", 180),
+    ("gold", 2, "골드 2", 200),
+    ("gold", 1, "골드 1", 220),
+    ("platinum", 4, "플래티넘 4", 240),
+    ("platinum", 3, "플래티넘 3", 260),
+    ("platinum", 2, "플래티넘 2", 280),
+    ("platinum", 1, "플래티넘 1", 300),
+    ("diamond", 4, "다이아몬드 4", 320),
+    ("diamond", 3, "다이아몬드 3", 340),
+    ("diamond", 2, "다이아몬드 2", 360),
+    ("diamond", 1, "다이아몬드 1", 380),
+    ("newbie", None, "신입", 400),
+    ("junior", None, "주니어", 480),
+    ("middle", None, "미들", 560),
+    ("senior", None, "시니어", 640),
+]
+
+
+def player_tier_for_score(score: float) -> dict:
+    """Map a cumulative player_rank_score to its player-ladder tier."""
+    score = max(0.0, float(score))
+    index = 0
+    for i, (_material, _division, _label, threshold) in enumerate(PLAYER_TIERS):
+        if score >= threshold:
+            index = i
+        else:
+            break
+
+    material, division, label, threshold = PLAYER_TIERS[index]
+    has_next = index + 1 < len(PLAYER_TIERS)
+    next_label = PLAYER_TIERS[index + 1][2] if has_next else None
+    next_threshold = PLAYER_TIERS[index + 1][3] if has_next else None
+    progress_percent = (
+        100.0
+        if not has_next
+        else round(min(100.0, (score - threshold) / (next_threshold - threshold) * 100), 1)
+    )
+
+    return {
+        "material": material,
+        "division": division,
+        "label": label,
+        "index": index,
+        "next_label": next_label,
+        "progress_percent": progress_percent,
+    }
+
+
+def player_tier_diff(index_a: int, index_b: int) -> int:
+    return abs(index_a - index_b)
 
 
 def _feedback_text(feedback: dict) -> str:

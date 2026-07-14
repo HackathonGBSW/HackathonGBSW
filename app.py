@@ -15,7 +15,8 @@ from llm_analyzer import (
     LLMError,
     RANK_SCORE_GAIN,
     rank_for_score,
-    rank_tier_diff,
+    player_tier_for_score,
+    player_tier_diff,
 )
 
 app = Flask(__name__, template_folder="templates")
@@ -47,6 +48,7 @@ class User(db.Model):
     win = db.Column(db.Integer, nullable=False, default=0)
     lose = db.Column(db.Integer, nullable=False, default=0)
     player_rank_score = db.Column(db.Integer, nullable=False, default=0)
+    win_streak = db.Column(db.Integer, nullable=False, default=0)
 
 class Portfolio_Rank(Enum):
     S = "S"
@@ -265,14 +267,27 @@ def _profile_to_dict(user):
         "username": user.username,
         "github_username": user.github_username,
         "main_field": user.main_field,
-        "player_rank": rank_for_score(user.player_rank_score),
+        "player_rank": player_tier_for_score(user.player_rank_score),
         "player_rank_score": user.player_rank_score,
         "battle_win": user.win,
         "battle_lose": user.lose,
         "battle_win_rate": win_rate,
+        "win_streak": user.win_streak,
         "portfolio_best_rank": portfolio_best_rank,
         "portfolio_avg_rank": portfolio_avg_rank,
     }
+
+BATTLE_WIN_BASE_SCORE = 8
+BATTLE_LOSS_SCORE = 3
+STREAK_BONUS_PER_WIN = 2
+STREAK_BONUS_CAP = 10
+
+def _win_score_gain(win_streak_after):
+    """win_streak_after is the streak count including the win just scored.
+    +2 per consecutive win beyond the first, capped at +10 (so a long streak
+    tops out at +18 total, matching the best single-portfolio score gain)."""
+    bonus = min((win_streak_after - 1) * STREAK_BONUS_PER_WIN, STREAK_BONUS_CAP)
+    return BATTLE_WIN_BASE_SCORE + bonus
 
 def _resolve_battle(field, username1, portfolio1, username2, portfolio2):
     """두 포트폴리오를 비교 채점하고 Battle을 만들어 반환한다 (커밋은 호출자 책임).
@@ -309,14 +324,18 @@ def _resolve_battle(field, username1, portfolio1, username2, portfolio2):
     if winner == username1:
         user1.win += 1
         user2.lose += 1
-        user1.player_rank_score += 8
-        user2.player_rank_score = max(0, user2.player_rank_score - 3)
+        user1.win_streak += 1
+        user2.win_streak = 0
+        user1.player_rank_score += _win_score_gain(user1.win_streak)
+        user2.player_rank_score = max(0, user2.player_rank_score - BATTLE_LOSS_SCORE)
     elif winner == username2:
         user2.win += 1
         user1.lose += 1
-        user2.player_rank_score += 8
-        user1.player_rank_score = max(0, user1.player_rank_score - 3)
-    # 무승부: 승/패, 랭크 점수 변동 없음
+        user2.win_streak += 1
+        user1.win_streak = 0
+        user2.player_rank_score += _win_score_gain(user2.win_streak)
+        user1.player_rank_score = max(0, user1.player_rank_score - BATTLE_LOSS_SCORE)
+    # 무승부: 승/패, 랭크 점수 변동 없음. 연승도 패배가 아니므로 끊지 않음.
 
     return battle
 
@@ -394,12 +413,19 @@ def profile_update():
 
 @app.route("/portfolios", methods=["GET", "POST"])
 def portfolios():
-    if not session:
-        return unauthorized()
-
-    if request.method == "GET": #포트폴리오 목록 조회
+    if request.method == "GET":
+        # ?username= 지정 시 공개 조회(상대 포트폴리오 선택용), 없으면 내 목록
+        username = request.args.get("username")
+        if username:
+            rows = Portfolio.query.filter_by(username=username).order_by(Portfolio.created_at.desc())
+            return ok_data([_portfolio_to_dict(p) for p in rows])
+        if not session:
+            return unauthorized()
         rows = Portfolio.query.filter_by(username=session["username"]).order_by(Portfolio.created_at.desc())
         return ok_data([_portfolio_to_dict(p) for p in rows])
+
+    if not session:
+        return unauthorized()
 
     # POST: 포트폴리오 등록
     data = _parse_body("repository", "field")
@@ -578,7 +604,7 @@ def battle_match():
         db.session.add(my_entry)
 
     me = db.get_or_404(User, my_username)
-    my_rank = rank_for_score(me.player_rank_score)
+    my_tier_index = player_tier_for_score(me.player_rank_score)["index"]
 
     candidates = MatchQueue.query.filter(
         MatchQueue.field == field,
@@ -589,9 +615,11 @@ def battle_match():
     opponent_entry = None
     for candidate in candidates:
         opponent = User.query.get(candidate.username)
-        if opponent and rank_tier_diff(my_rank, rank_for_score(opponent.player_rank_score)) <= 1:
-            opponent_entry = candidate
-            break
+        if opponent:
+            opponent_tier_index = player_tier_for_score(opponent.player_rank_score)["index"]
+            if player_tier_diff(my_tier_index, opponent_tier_index) <= 1:
+                opponent_entry = candidate
+                break
 
     if opponent_entry is None: #대기 중인 상대가 없으면 (재)대기
         db.session.commit()
@@ -635,6 +663,28 @@ def my():
     if session and "username" in session:
         return ok_data({"username": session["username"]})
     return unauthorized()
+
+LEADERBOARD_LIMIT = 100
+
+@app.get("/leaderboard")
+def leaderboard():
+    field = request.args.get("field")
+    query = User.query
+    if field:
+        query = query.filter_by(main_field=field)
+    users = query.order_by(User.player_rank_score.desc()).limit(LEADERBOARD_LIMIT).all()
+    return ok_data([
+        {
+            "username": u.username,
+            "main_field": u.main_field,
+            "player_rank": player_tier_for_score(u.player_rank_score),
+            "player_rank_score": u.player_rank_score,
+            "battle_win": u.win,
+            "battle_lose": u.lose,
+            "win_streak": u.win_streak,
+        }
+        for u in users
+    ])
 
 if __name__ == "__main__":
     # macOS AirPlay Receiver occupies :5000 — use 5001 for local Vite proxy.
