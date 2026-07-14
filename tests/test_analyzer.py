@@ -97,8 +97,11 @@ class AnalyzerTests(unittest.TestCase):
         self.assertEqual(parse_github_url("https://github.com/openai/openai-python"), ("openai", "openai-python"))
 
     def test_rank_boundaries(self) -> None:
-        cases = [(100, "S"), (99.5, "A"), (90, "A"), (80, "B"), (60, "C"),
-                 (40, "D"), (20, "E"), (19.99, "F"), (0, "F")]
+        # Thresholds calibrated against real repos (see analyzer.py's
+        # rank_from_score docstring) rather than a plain 0-100 curve.
+        cases = [(100, "S"), (95, "S"), (94.99, "A"), (82, "A"), (81.99, "B"),
+                 (65, "B"), (64.99, "C"), (45, "C"), (44.99, "D"),
+                 (28, "D"), (27.99, "E"), (12, "E"), (11.99, "F"), (0, "F")]
         for score, expected in cases:
             with self.subTest(score=score):
                 self.assertEqual(rank_from_score(score), expected)

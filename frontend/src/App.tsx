@@ -12,6 +12,7 @@ import {
   BattleFriendFlowPage,
   BattleFightingPage,
   BattleOutcomePage,
+  RankingPage,
 } from "./pages/Flow";
 
 /**
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="battle/friend" element={<BattleFriendFlowPage />} />
           <Route path="battle/fighting" element={<BattleFightingPage />} />
           <Route path="battle/result" element={<BattleOutcomePage />} />
+          <Route path="ranking" element={<RankingPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

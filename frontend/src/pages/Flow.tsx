@@ -2,30 +2,43 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { BattleGaugeReveal } from "../components/BattleGaugeReveal";
 import { ScoreRadar } from "../components/ScoreRadar";
-import { Avatar, Button, Input, RankPill } from "../components/ui";
+import { Button, Input, PlayerTierLabel, RankPill } from "../components/ui";
 import {
   DEMO,
   FIELDS,
   PORTFOLIO_FIELDS,
   SCORE_ITEMS,
   api,
+  formatRankTier,
   githubProfileUrl,
   isBattle,
   setAuthUsername,
   toSafeHttpUrl,
+  toPortfolioDetail,
   type Battle,
+  type LeaderboardEntry,
   type Portfolio,
   type PortfolioScores,
   type Profile,
+  type Rank,
 } from "../lib/api";
 import profileAvatar from "../assets/profile-card-avatar.jpg";
-import profileBanner from "../assets/profile-card-banner.jpg";
 import "./flow.css";
 
 const LAST_BATTLE_KEY = "last-battle";
 const PENDING_ANALYZE_KEY = "pending-analyze";
 const LAST_ANALYZE_KEY = "last-analyze";
 const PENDING_BATTLE_KEY = "pending-battle";
+
+const DEMO_RADAR_SCORES: PortfolioScores = {
+  completeness: 24,
+  structure: 7,
+  tech: 11,
+  docs: 3,
+  test: 3,
+  deploy: 10,
+  github: 15,
+};
 
 function formatWinRate(rate: number | null, wins: number, losses: number) {
   if (rate == null || wins + losses === 0) return `기록 없음 (0승 0패)`;
@@ -35,7 +48,9 @@ function formatWinRate(rate: number | null, wins: number, losses: number) {
 /** 메인(마이페이지): 넓은 프로필 카드 + 스크롤 시 랭크받기/대결하기 반반 */
 export function MainPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [latestScores, setLatestScores] = useState<PortfolioScores | null>(null);
   const [loading, setLoading] = useState(true);
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,9 +59,17 @@ export function MainPage() {
         const me = await api.me();
         setAuthUsername(me.username);
         const p = await api.getProfile(me.username);
-        if (!cancelled) setProfile(p);
+        const portfolios = await api.listPortfolios().catch(() => []);
+        const latestPortfolio = [...portfolios].sort((a, b) => b.id - a.id)[0];
+        if (!cancelled) {
+          setProfile(p);
+          setLatestScores(latestPortfolio ? toPortfolioDetail(latestPortfolio).scores : null);
+        }
       } catch {
-        if (!cancelled) setProfile(null);
+        if (!cancelled) {
+          setProfile(null);
+          setLatestScores(null);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -58,7 +81,7 @@ export function MainPage() {
 
   const u = profile ?? DEMO;
   const isDemo = !profile;
-  const rankScore = Math.min(100, Math.max(0, u.player_rank_score));
+  const radarScores = latestScores ?? DEMO_RADAR_SCORES;
   const githubHref = githubProfileUrl(u.github_username);
   const categoryChips = [
     u.main_field ?? FIELDS[0],
@@ -67,13 +90,14 @@ export function MainPage() {
   const profileStats = [
     { label: "사용자 이름", value: u.username },
     { label: "주분야", value: u.main_field ?? "미선택" },
-    { label: "플레이어 랭크", value: u.player_rank },
+    { label: "플레이어 랭크", value: u.player_rank.label },
     {
       label: "대결 승률",
       value: formatWinRate(u.battle_win_rate, u.battle_win, u.battle_lose),
     },
-    { label: "포폴 최고 랭크", value: u.portfolio_best_rank ?? "—" },
-    { label: "포폴 평균 랭크", value: u.portfolio_avg_rank ?? "—" },
+    { label: "연승", value: u.win_streak > 0 ? `${u.win_streak}연승` : "없음" },
+    { label: "포폴 최고 랭크", value: formatRankTier(u.portfolio_best_rank) },
+    { label: "포폴 평균 랭크", value: formatRankTier(u.portfolio_avg_rank) },
   ];
 
   return (
@@ -91,17 +115,26 @@ export function MainPage() {
         ) : null}
         <article className="profile-card">
           <div className="profile-card__banner">
-            <img src={profileBanner} alt="" />
             <div className="profile-card__rank">
-              <span>PLAYER RANK</span>
-              <strong>{u.player_rank}</strong>
+              <span className="profile-card__rank-caption">PLAYER RANK</span>
+              <strong>
+                <PlayerTierLabel rank={u.player_rank} />
+              </strong>
             </div>
           </div>
 
           <div className="profile-card__body">
             <div className="profile-card__head">
               <div className="profile-card__avatar" aria-hidden>
-                <img src={profileAvatar} alt="" />
+                <img
+                  src={
+                    u.github_username && !avatarFailed
+                      ? `https://github.com/${encodeURIComponent(u.github_username)}.png`
+                      : profileAvatar
+                  }
+                  alt=""
+                  onError={() => setAvatarFailed(true)}
+                />
               </div>
 
               <div className="profile-card__title">
@@ -128,6 +161,19 @@ export function MainPage() {
               ))}
             </div>
 
+            <section className="profile-card__analysis" aria-label="포트폴리오 분석 지표">
+              <div className="profile-card__analysis-copy">
+                <span>Portfolio Analysis</span>
+                <strong>7개 항목 분석</strong>
+                <p>대결 기준으로 쓰이는 핵심 항목을 한 번에 비교합니다.</p>
+              </div>
+              <ScoreRadar
+                scores={radarScores}
+                size={260}
+                className="profile-card__radar"
+              />
+            </section>
+
             <dl className="profile-card__stats">
               {profileStats.map((item) => (
                 <div key={item.label} className="profile-card__stat">
@@ -149,11 +195,13 @@ export function MainPage() {
 
               <div className="profile-card__meter" aria-label="플레이어 랭크 점수">
                 <div>
-                  <span>플레이어 점수</span>
-                  <strong className="num">{u.player_rank_score}</strong>
+                  <span>
+                    {u.player_rank.next_label ? `${u.player_rank.next_label}까지` : "최고 티어"}
+                  </span>
+                  <strong>{Math.round(u.player_rank.progress_percent)}%</strong>
                 </div>
                 <i>
-                  <span style={{ width: `${rankScore}%` }} />
+                  <span style={{ width: `${u.player_rank.progress_percent}%` }} />
                 </i>
               </div>
             </div>
@@ -209,7 +257,7 @@ export function RankPage() {
       <div className="flow-rank__shape">
         <div className="flow-rank__inner">
           <p className="badge">Rank</p>
-          <h1 className="t-h1" style={{ marginTop: 12 }}>
+          <h1 className="t-h1" style={{ marginTop: 32 }}>
             랭크 받기
           </h1>
           <p className="t-body" style={{ marginTop: 8 }}>
@@ -337,7 +385,8 @@ export function RankResultPage() {
   })();
 
   const total = cached?.total_score ?? 0;
-  const rank = cached?.rank ?? "F";
+  const rank = (cached?.rank ?? "F") as Rank;
+  const rankLabel = formatRankTier(rank);
   const gained = cached?.player_rank_score_gained ?? 0;
   const good = cached?.feedback?.good ?? "—";
   const improve = cached?.feedback?.improve ?? "—";
@@ -367,11 +416,11 @@ export function RankResultPage() {
         </div>
 
         <div className="row" style={{ marginTop: 8, gap: 16 }}>
-          <RankPill rank={rank} score={Math.round(total)} />
+          <RankPill rank={rankLabel} score={Math.round(total)} />
           <div>
             <p className="t-h1 num">{Math.round(total)}</p>
             <p className="t-cap">
-              총점 · 랭크 {rank} · RP{" "}
+              총점 · 랭크 {rankLabel} · RP{" "}
               <span className="num up">+{gained}</span>
             </p>
           </div>
@@ -605,7 +654,7 @@ export function BattleMatchFlowPage() {
           >
             {portfolios.map((p) => (
               <option key={p.id} value={p.id}>
-                [{p.rank}] {p.field} — {p.repository}
+                [{formatRankTier(p.rank)}] {p.field} — {p.repository}
               </option>
             ))}
           </select>
@@ -627,7 +676,11 @@ export function BattleFriendFlowPage() {
   const { portfolios, error: loadError, loading } = useMyPortfolios();
   const [portfolioId, setPortfolioId] = useState<number | "">("");
   const [opponent, setOpponent] = useState("");
-  const [opponentPortfolioId, setOpponentPortfolioId] = useState("");
+  const [opponentPortfolioId, setOpponentPortfolioId] = useState<number | "">("");
+  const [opponentPortfolios, setOpponentPortfolios] = useState<Portfolio[]>([]);
+  const [opponentLookupState, setOpponentLookupState] = useState<
+    "idle" | "loading" | "found" | "empty" | "error"
+  >("idle");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -637,12 +690,47 @@ export function BattleFriendFlowPage() {
     }
   }, [portfolios, portfolioId]);
 
+  const myField = portfolios.find((p) => p.id === portfolioId)?.field;
+
+  // 상대 이름을 입력하면 자동으로 그 사람의 포트폴리오를 조회해 (같은 분야만)
+  // 골라 쓸 수 있게 한다 — 이전에는 상대 포트폴리오 ID를 알아낼 방법이 없었음.
+  useEffect(() => {
+    const username = opponent.trim();
+    if (!username || !myField) {
+      setOpponentPortfolios([]);
+      setOpponentPortfolioId("");
+      setOpponentLookupState("idle");
+      return;
+    }
+    let cancelled = false;
+    setOpponentLookupState("loading");
+    const t = window.setTimeout(async () => {
+      try {
+        const rows = await api.listPortfoliosByUsername(username);
+        if (cancelled) return;
+        const matching = rows.filter((p) => p.field === myField);
+        setOpponentPortfolios(matching);
+        setOpponentPortfolioId(matching[0]?.id ?? "");
+        setOpponentLookupState(matching.length ? "found" : "empty");
+      } catch {
+        if (!cancelled) {
+          setOpponentPortfolios([]);
+          setOpponentPortfolioId("");
+          setOpponentLookupState("error");
+        }
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [opponent, myField]);
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const selected = portfolios.find((p) => p.id === portfolioId);
-    const oppId = Number(opponentPortfolioId);
-    if (!selected || !opponent.trim() || !oppId) {
-      setError("상대 이름과 양쪽 포트폴리오를 모두 입력하세요.");
+    if (!selected || !opponent.trim() || !opponentPortfolioId) {
+      setError("상대 이름을 입력하고 상대 포트폴리오를 선택하세요.");
       return;
     }
     setSubmitting(true);
@@ -652,7 +740,7 @@ export function BattleFriendFlowPage() {
         field: selected.field,
         opponent_username: opponent.trim(),
         portfolio_id: selected.id,
-        opponent_portfolio_id: oppId,
+        opponent_portfolio_id: opponentPortfolioId,
       });
       sessionStorage.setItem(LAST_BATTLE_KEY, JSON.stringify(battle));
       sessionStorage.setItem(
@@ -705,7 +793,7 @@ export function BattleFriendFlowPage() {
           >
             {portfolios.map((p) => (
               <option key={p.id} value={p.id}>
-                [{p.rank}] {p.field} — {p.repository}
+                [{formatRankTier(p.rank)}] {p.field} — {p.repository}
               </option>
             ))}
           </select>
@@ -714,15 +802,35 @@ export function BattleFriendFlowPage() {
           label="상대 사용자 이름"
           value={opponent}
           onChange={(e) => setOpponent(e.target.value)}
+          placeholder="octocat"
           required
         />
-        <Input
-          label="상대 포트폴리오 ID"
-          value={opponentPortfolioId}
-          onChange={(e) => setOpponentPortfolioId(e.target.value)}
-          placeholder="숫자 ID"
-          required
-        />
+        <label className="field">
+          <span className="field__label">상대 포트폴리오</span>
+          {opponentLookupState === "loading" ? (
+            <p className="t-cap">불러오는 중…</p>
+          ) : opponentLookupState === "found" ? (
+            <select
+              className="field__input"
+              value={opponentPortfolioId}
+              onChange={(e) => setOpponentPortfolioId(Number(e.target.value))}
+            >
+              {opponentPortfolios.map((p) => (
+                <option key={p.id} value={p.id}>
+                  [{formatRankTier(p.rank)}] {p.field} — {p.repository}
+                </option>
+              ))}
+            </select>
+          ) : opponentLookupState === "empty" ? (
+            <p className="t-cap">
+              {myField ? `${myField} 분야로 등록된 포트폴리오가 없습니다.` : "내 포트폴리오를 먼저 선택하세요."}
+            </p>
+          ) : opponentLookupState === "error" ? (
+            <p className="t-cap">사용자를 찾을 수 없습니다.</p>
+          ) : (
+            <p className="t-cap">상대 이름을 입력하면 포트폴리오가 자동으로 표시됩니다.</p>
+          )}
+        </label>
         {error ? (
           <p style={{ color: "var(--color-semantic-down)", fontSize: 13 }}>{error}</p>
         ) : null}
@@ -748,33 +856,44 @@ export function BattleFightingPage() {
   })();
 
   useEffect(() => {
-    const t = window.setTimeout(
-      () => nav("/app/battle/result", { replace: true }),
-      battle ? 1200 : 400,
-    );
+    if (battle) return;
+    const t = window.setTimeout(() => nav("/app/battle/result", { replace: true }), 400);
     return () => window.clearTimeout(t);
   }, [nav, battle]);
 
-  const me = battle?.username1 ?? "me";
-  const opp = battle?.username2 ?? "opponent";
-
-  return (
-    <div className="flow-loading">
-      <div className="flow-loading__card">
-        <div className="flow-loading__spin" aria-hidden />
-        <h1 className="t-h1">대결 분석 중</h1>
-        <div className="row" style={{ justifyContent: "center", gap: 28, marginTop: 8 }}>
-          <div>
-            <Avatar name={me} size="lg" />
-            <p className="t-sm">{me}</p>
-          </div>
-          <span className="muted">VS</span>
-          <div>
-            <Avatar name={opp} size="lg" />
-            <p className="t-sm">{opp}</p>
-          </div>
+  if (!battle) {
+    return (
+      <div className="flow-loading">
+        <div className="flow-loading__card">
+          <div className="flow-loading__spin" aria-hidden />
+          <h1 className="t-h1">대결 분석 중</h1>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="flow-battle-fighting">
+      <section className="flow-battle-fighting__card">
+        <p className="badge">Battle Scan</p>
+        <h1 className="t-h1" style={{ marginTop: 12 }}>
+          항목별 비교 공개
+        </h1>
+        <p className="t-body" style={{ marginTop: 8 }}>
+          중앙 게이지가 흔들린 뒤, 위 항목부터 차례대로 승부를 공개합니다.
+        </p>
+        <div className="flow-battle-fighting__gauge">
+          <BattleGaugeReveal
+            leftName={battle.username1}
+            rightName={battle.username2}
+            leftScores={battle.scores1}
+            rightScores={battle.scores2}
+            onComplete={() => {
+              window.setTimeout(() => nav("/app/battle/result", { replace: true }), 500);
+            }}
+          />
+        </div>
+      </section>
     </div>
   );
 }
@@ -782,7 +901,6 @@ export function BattleFightingPage() {
 export function BattleOutcomePage() {
   const nav = useNavigate();
   const [me, setMe] = useState("me");
-  const [revealDone, setRevealDone] = useState(false);
 
   useEffect(() => {
     api.me()
@@ -821,67 +939,53 @@ export function BattleOutcomePage() {
   const oppName = iAmUser1 ? battle.username2 : battle.username1;
   const myResult = iAmUser1 ? battle.result1 : battle.result2;
   const oppResult = iAmUser1 ? battle.result2 : battle.result1;
-  const myScores = iAmUser1 ? battle.scores1 : battle.scores2;
-  const oppScores = iAmUser1 ? battle.scores2 : battle.scores1;
   const myFeedback = iAmUser1 ? battle.feedback1 : battle.feedback2;
   const draw = battle.winner == null;
   const won = !draw && battle.winner === myName;
 
   return (
     <div className="flow-outcome">
-      <section className="flow-outcome__reveal">
-        <BattleGaugeReveal
-          leftName={myName}
-          rightName={oppName}
-          leftScores={myScores}
-          rightScores={oppScores}
-          onComplete={() => setRevealDone(true)}
-        />
-      </section>
-
-      {revealDone ? (
-        <section
-          className={`flow-outcome__banner battle-gauge__verdict-enter ${
-            draw ? "is-lose" : won ? "is-win" : "is-lose"
-          }`}
-        >
-          <p className="flow-outcome__verdict">
-            {draw ? "무승부" : won ? "승리" : "패배"}
-          </p>
-          <p className="t-body" style={{ color: "inherit", opacity: 0.85 }}>
-            {draw ? (
-              "랭크 점수 변동 없음"
-            ) : won ? (
-              <>
-                플레이어 점수 <span className="num">+8</span>
-              </>
-            ) : (
-              <>
-                플레이어 점수 <span className="num">-3</span>
-              </>
-            )}
-          </p>
-          <div className="row" style={{ marginTop: 20, gap: 28, justifyContent: "center" }}>
-            <div>
-              <p className="t-cap" style={{ color: "inherit", opacity: 0.7 }}>
-                {myName}
-              </p>
-              <p className="t-h1 num" style={{ color: "inherit" }}>
-                {myResult}
-              </p>
-            </div>
-            <span style={{ opacity: 0.5 }}>VS</span>
-            <div>
-              <p className="t-cap" style={{ color: "inherit", opacity: 0.7 }}>
-                {oppName}
-              </p>
-              <p className="t-h1 num" style={{ color: "inherit" }}>
-                {oppResult}
-              </p>
-            </div>
+      <section
+        className={`flow-outcome__banner battle-gauge__verdict-enter ${
+          draw ? "is-lose" : won ? "is-win" : "is-lose"
+        }`}
+      >
+        <p className="flow-outcome__verdict">
+          {draw ? "무승부" : won ? "승리" : "패배"}
+        </p>
+        <p className="t-body" style={{ color: "inherit", opacity: 0.85 }}>
+          {draw ? (
+            "랭크 점수 변동 없음"
+          ) : won ? (
+            <>
+              플레이어 점수 <span className="num">+8</span>
+            </>
+          ) : (
+            <>
+              플레이어 점수 <span className="num">-3</span>
+            </>
+          )}
+        </p>
+        <div className="row" style={{ marginTop: 20, gap: 28, justifyContent: "center" }}>
+          <div>
+            <p className="t-cap" style={{ color: "inherit", opacity: 0.7 }}>
+              {myName}
+            </p>
+            <p className="t-h1 num" style={{ color: "inherit" }}>
+              {myResult}
+            </p>
           </div>
-        </section>
-      ) : null}
+          <span style={{ opacity: 0.5 }}>VS</span>
+          <div>
+            <p className="t-cap" style={{ color: "inherit", opacity: 0.7 }}>
+              {oppName}
+            </p>
+            <p className="t-h1 num" style={{ color: "inherit" }}>
+              {oppResult}
+            </p>
+          </div>
+        </div>
+      </section>
 
       <section className="flow-outcome__detail">
         <div className="grid-2" style={{ marginTop: 8 }}>
@@ -906,6 +1010,109 @@ export function BattleOutcomePage() {
           </Button>
         </div>
       </section>
+    </div>
+  );
+}
+
+const RANKING_FIELD_ALL = "전체";
+
+/** 랭킹: 플레이어 랭크 순위표 (롤 순위표 스타일) */
+export function RankingPage() {
+  const [field, setField] = useState<string>(RANKING_FIELD_ALL);
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    api
+      .getLeaderboard(field === RANKING_FIELD_ALL ? undefined : field)
+      .then((rows) => {
+        if (!cancelled) setEntries(rows);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "리더보드를 불러오지 못했습니다.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [field]);
+
+  return (
+    <div className="flow-rank">
+      <div className="flow-rank__shape">
+        <div className="flow-rank__inner">
+          <p className="badge">Ranking</p>
+          <h1 className="t-h1" style={{ marginTop: 12 }}>
+            랭킹
+          </h1>
+          <p className="t-body" style={{ marginTop: 8 }}>
+            플레이어 랭크 순위표입니다.
+          </p>
+
+          <div className="chips" style={{ marginTop: 20 }}>
+            {[RANKING_FIELD_ALL, ...FIELDS].map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={`chip ${field === f ? "is-on" : ""}`}
+                onClick={() => setField(f)}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 24, overflowX: "auto" }}>
+            {loading ? <p className="t-cap">불러오는 중…</p> : null}
+            {error ? (
+              <p style={{ color: "var(--color-semantic-down)", fontSize: 13 }}>{error}</p>
+            ) : null}
+            {!loading && !error && entries.length === 0 ? (
+              <p className="t-cap">등록된 사용자가 없습니다.</p>
+            ) : null}
+            {!loading && !error && entries.length > 0 ? (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>사용자</th>
+                    <th>분야</th>
+                    <th>플레이어 랭크</th>
+                    <th>승/패</th>
+                    <th>연승</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map((entry, index) => (
+                    <tr key={entry.username}>
+                      <td className="num">{index + 1}</td>
+                      <td>{entry.username}</td>
+                      <td>{entry.main_field ?? "—"}</td>
+                      <td>
+                        <PlayerTierLabel rank={entry.player_rank} />
+                      </td>
+                      <td className="num">
+                        {entry.battle_win}승 {entry.battle_lose}패
+                      </td>
+                      <td className="num">
+                        {entry.win_streak > 0 ? `${entry.win_streak}연승` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : null}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

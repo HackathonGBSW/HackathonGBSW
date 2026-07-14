@@ -77,22 +77,6 @@ export function LoginPage() {
         <p className="t-cap" style={{ textAlign: "center" }}>
           <Link to="/signup">회원가입</Link>
         </p>
-        <button
-          type="button"
-          onClick={() => {
-            setAuthUsername(null);
-            nav("/app");
-          }}
-          style={{
-            border: 0,
-            background: "none",
-            color: "var(--color-muted)",
-            fontSize: 13,
-            textDecoration: "underline",
-          }}
-        >
-          미리보기 (백엔드 없이)
-        </button>
       </form>
     </AuthShell>
   );
